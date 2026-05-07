@@ -72,6 +72,10 @@ salmon_data_pink_e_location <- pke_data_w_coord %>%
   select(CU,  Y_LAT, X_LONG, River, GFE_ID) %>% 
   distinct()
 
+salmon_data_pink_o_location <- pko_data_w_coord %>% 
+  select(CU,  Y_LAT, X_LONG, River, GFE_ID) %>% 
+  distinct()
+
 
 # read sst df
 
@@ -109,6 +113,121 @@ location_data_long_df_distinct <- sst_df %>%
   filter(!is.na(sst)) %>%
   select(lat, lon) %>% 
   distinct()
+
+
+distance_df_pink_e <- tibble()
+
+# looking at the distances between sst data points and salmon locations 
+for(i in 1:nrow(salmon_data_pink_e_location)){
+  for(j in 1:nrow(location_data_long_df_distinct)){
+    distance <- haversine(salmon_data_pink_e_location$Y_LAT[i], salmon_data_pink_e_location$X_LONG[i], 
+                          location_data_long_df_distinct$lat[j], location_data_long_df_distinct$lon[j])
+    distance_df_pink_e <- distance_df_pink_e %>% bind_rows(data.frame(CU = salmon_data_pink_e_location$CU[i], 
+                                                        River = salmon_data_pink_e_location$River[i],
+                                                        GFE_ID = salmon_data_pink_e_location$GFE_ID[i],
+                                                        sst_ersst_lat = location_data_long_df_distinct$lat[j], 
+                                                        sst_ersst_lon = location_data_long_df_distinct$lon[j],
+                                                        distance = distance))
+    
+  }
+  
+}
+
+distance_df_pink_o <- tibble()
+
+# looking at the distances between sst data points and salmon locations 
+for(i in 1:nrow(salmon_data_pink_o_location)){
+  for(j in 1:nrow(location_data_long_df_distinct)){
+    distance <- haversine(salmon_data_pink_o_location$Y_LAT[i], salmon_data_pink_o_location$X_LONG[i], 
+                          location_data_long_df_distinct$lat[j], location_data_long_df_distinct$lon[j])
+    distance_df_pink_o <- distance_df_pink_o %>% bind_rows(data.frame(CU = salmon_data_pink_o_location$CU[i], 
+                                                                      River = salmon_data_pink_o_location$River[i],
+                                                                      GFE_ID = salmon_data_pink_o_location$GFE_ID[i],
+                                                                      sst_ersst_lat = location_data_long_df_distinct$lat[j], 
+                                                                      sst_ersst_lon = location_data_long_df_distinct$lon[j],
+                                                                      distance = distance))
+    
+  }
+  
+}
+
+# looking the minimum of those distances for each river
+
+min_distance_df_pink_e <- distance_df_pink_e %>% 
+  group_by(CU, River, GFE_ID) %>% 
+  filter(distance == min(distance)) %>% 
+  ungroup() 
+
+min_distance_df_pink_o <- distance_df_pink_o %>% 
+  group_by(CU, River, GFE_ID) %>% 
+  filter(distance == min(distance)) %>% 
+  ungroup() 
+
+sst_df_spring <- sst_df %>% 
+  group_by(lat, lon ,year) %>% 
+  summarise(spring_ersst = mean(sst)) %>%
+  ungroup()
+
+salmon_pink_e_data_distance_temp <- pke_data_w_coord %>% 
+  left_join(min_distance_df_pink_e %>% 
+              select(CU, River, distance, sst_ersst_lat, sst_ersst_lon, GFE_ID),
+            by = c("CU" = "CU", "River" = "River", "GFE_ID"="GFE_ID")) %>% 
+  left_join(sst_df_spring %>% 
+              group_by(lat, lon , year) %>%
+              mutate(BroodYear = year-1) %>% #sst fron year n will affect salmon whose BroodYear is n-1
+              rename("sst_ersst_year" = "year"),
+            by = c("BroodYear" = "BroodYear", "sst_ersst_lat" = "lat", "sst_ersst_lon" = "lon"))
+
+
+salmon_pink_o_data_distance_temp <- pko_data_w_coord %>% 
+  left_join(min_distance_df_pink_o %>% 
+              select(CU, River, distance, sst_ersst_lat, sst_ersst_lon, GFE_ID),
+            by = c("CU" = "CU", "River" = "River", "GFE_ID"="GFE_ID")) %>% 
+  left_join(sst_df_spring %>% 
+              group_by(lat, lon , year) %>%
+              mutate(BroodYear = year-1) %>% #sst fron year n will affect salmon whose BroodYear is n-1
+              rename("sst_ersst_year" = "year"),
+            by = c("BroodYear" = "BroodYear", "sst_ersst_lat" = "lat", "sst_ersst_lon" = "lon"))
+
+
+
+#check how many rows have NA for spring_ersst
+
+salmon_pink_e_data_distance_temp %>% 
+  filter(is.na(spring_ersst)) %>% 
+  nrow()
+#none
+
+salmon_pink_o_data_distance_temp %>% 
+  filter(is.na(spring_ersst)) %>% 
+  nrow()
+#none
+
+glimpse(salmon_pink_e_data_distance_temp)
+
+glimpse(salmon_pink_o_data_distance_temp)
+
+
+#check differences between current dataset and this dataset
+# old_data <- read.csv(here("..","coastwide-salmon-forestry","origional-ecofish-data-models","Data","Processed",
+#                           "pke_SR_10_hat_yr_w_ersst.csv"))
+# summary(arsenal::comparedf(salmon_pink_e_data_distance_temp, old_data))
+
+
+
+
+
+write.csv(salmon_pink_e_data_distance_temp, here("salmon_forestry_data_analysis",
+                                                "data",
+                                                "pke_SR_10_hat_yr_w_ersst.csv"), row.names = FALSE)
+
+
+write.csv(salmon_pink_o_data_distance_temp, here("salmon_forestry_data_analysis",
+                                                "data",
+                                                "pko_SR_10_hat_yr_w_ersst.csv"), row.names = FALSE)
+
+
+
 
 
 
