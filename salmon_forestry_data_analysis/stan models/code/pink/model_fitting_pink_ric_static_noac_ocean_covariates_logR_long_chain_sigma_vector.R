@@ -23,7 +23,7 @@ library(furrr)
 source(here('salmon_forestry_data_analysis','stan models','code','funcs.R'))
 
 # load Stan model sets####
-file_ric=file.path(here('salmon_forestry_data_analysis','stan models', 'code','pink',
+file_ric_st=file.path(here('salmon_forestry_data_analysis','stan models', 'code','pink',
                         'ric_pink_static_noac_ocean_covariates_logR_new_sigma_vector.stan'))
 mric_p_st=cmdstanr::cmdstan_model(file_ric_st) #compile stan code to C++
 
