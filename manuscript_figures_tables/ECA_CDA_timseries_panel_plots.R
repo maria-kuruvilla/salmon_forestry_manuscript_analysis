@@ -11,7 +11,7 @@
 ##
 
 ## Required packages
-list.of.packages <- c("tidyverse", "extrafont", "lubridate", "ggplot2", "sf", "qs", "openxlsx", "cowplot", "rnaturalearth", "ggpubr") 
+list.of.packages <- c("tidyverse", "extrafont", "lubridate", "ggplot2", "sf", "qs", "openxlsx", "cowplot", "rnaturalearth", "ggpubr", "here") 
 
 #What packages need to be installed?
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[, "Package"])] 
@@ -24,7 +24,7 @@ if (length(new.packages)) {
 ## Loading libraries
 invisible(lapply(list.of.packages, library, character.only = TRUE))
 
-source("forestry_data_compilation/r_functions/plot_forest_disturance_timeseries_inset.R")
+source(here("manuscript_figures_tables","r_functions", "plot_forest_disturance_timeseries_inset.R"))
 
 # Loading data ----
 # Data for plot
@@ -34,30 +34,30 @@ USA <- subset(world, admin == "United States of America")
 
 # Conservation Units polygons ----
 # Chum
-CM_poly <- st_read("forestry_data_compilation/inputs/salmon_datasets_plotting/chum_CUS.gpkg") %>%
+CM_poly <- st_read(here("salmon_forestry_data_analysis", "data", "salmon_datasets_plotting", "chum_CUS.gpkg")) %>%
   mutate(CU = gsub("(?<![0-9])0+", "", CU, perl = TRUE))
 
 # Pink-Odd years
-PKO_poly <- st_read("forestry_data_compilation/inputs/salmon_datasets_plotting/pink_odd_CUS.gpkg") %>%
+PKO_poly <- st_read(here("salmon_forestry_data_analysis", "data", "salmon_datasets_plotting", "pink_odd_CUS.gpkg")) %>%
   mutate(CU = gsub("(?<![0-9])0+", "", CU, perl = TRUE))
 
 # Pink-Even years
-PKE_poly <- st_read("forestry_data_compilation/inputs/salmon_datasets_plotting/pink_even_CUS.gpkg") %>%
+PKE_poly <- st_read(here("salmon_forestry_data_analysis", "data", "salmon_datasets_plotting", "pink_even_CUS.gpkg")) %>%
   mutate(CU = gsub("(?<![0-9])0+", "", CU, perl = TRUE))
 
 # Salmon Lookup Table ----
 # Link betwork salmon populations and forestry information
-salmon_IDS <- read_csv("forestry_data_compilation/inputs/salmon_datasets_plotting/salmon_watersheds_lookup.csv")
+salmon_IDS <- read_csv(here("salmon_forestry_data_analysis", "data", "salmon_datasets_plotting", "salmon_watersheds_lookup.csv"))
 
 salmon_IDS$LINEAR_FEATURE_ID <- as.character(salmon_IDS$LINEAR_FEATURE_ID) 
 
 # Forestry Dataset ----
 # Timeseries
-ECA_data <- read_csv("forestry_data_compilation/inputs/forestry_data/forestry_data_timeseries.csv")  %>%  
+ECA_data <- read_csv(here("forestry_data_compilation", "forestry_data_timeseries.csv"))  %>%  
   mutate(LINEAR_FEATURE_ID = as.character(LINEAR_FEATURE_ID))
 
 # Forestry data summaries
-ECA_sum <- read_csv("forestry_data_compilation/inputs/forestry_data/forestry_data_metadata.csv") %>%
+ECA_sum <- read_csv(here("forestry_data_compilation", "forestry_data_metadata.csv"))  %>% 
   select(group, 
          LINEAR_FEATURE_ID = this_lfid , 
          portion_reporting_vri_cover1_missing) %>%  # Proportion of reported VRI
@@ -101,8 +101,7 @@ vanc_isl_plot <- ggarrange(plotlist = CU_plt, ncol = 4, nrow = 4)
 x11()
 vanc_isl_plot
 
-# ggsave(vanc_isl_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/ECA_CU_CHUM_Vanc_Isl.png",
-#        width = 12, height = 8, units = "in")
+ggsave(vanc_isl_plot,  filename = here("output_figures_tables","forest_supplement","ECA_CU_CHUM_Vanc_Isl.png"), width = 12, height = 8, units = "in")
 
 ### Haida Gwaii isl and north coast ----
 hgwai <-  paste0("CM-", seq(18, 32))
@@ -121,8 +120,7 @@ CU_plt <- lapply(hgwai, \(x) plot_forest_disturance_timeseries_inset(x,
 
 hgwai_plot <- ggarrange(plotlist = CU_plt, ncol = 4, nrow = 4)
 hgwai_plot
-# ggsave(hgwai_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/ECA_CU_CHUM_hgwaii_Isl.png",
-#        width = 12, height = 8, units = "in")
+ggsave(hgwai_plot,  filename = here("output_figures_tables","forest_supplement","ECA_CU_CHUM_hgwaii_Isl.png"), width = 12, height = 8, units = "in")
 
 ## Pink-odd years ----
 mod.dat.PKO <- ECA_data %>% filter(Species %in% "PKO")
@@ -159,8 +157,8 @@ CU_plt <- lapply(vanc_isl, function(x) plot_forest_disturance_timeseries_inset(x
 vanc_isl_plot <- ggarrange(plotlist = CU_plt, ncol = 3, nrow = 2)
 vanc_isl_plot
 
-# ggsave(vanc_isl_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/ECA_CU_PKO_Vanc_Isl.png",
-#        width = 9, height = 4, units = "in")
+ggsave(vanc_isl_plot,  filename = here("output_figures_tables","forest_supplement","ECA_CU_PKO_Vanc_Isl.png"),
+       width = 9, height = 4, units = "in")
 
 ### Haida Gwaii isl and North coast ----
 hgwai <-  paste0("PKO-", seq(9, 18))
@@ -181,8 +179,8 @@ CU_plt <- lapply(hgwai, function(x) plot_forest_disturance_timeseries_inset(x,
 hgwai_plot <- ggarrange(plotlist = CU_plt, ncol = 4, nrow = 3)
 hgwai_plot
 
-# ggsave(hgwai_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/ECA_CU_PKO_hgwaii_Isl.png",
-#        width = 12, height = 6, units = "in")
+ggsave(hgwai_plot,  filename = here("output_figures_tables","forest_supplement","ECA_CU_PKO_hgwaii_Isl.png"),
+       width = 12, height = 6, units = "in")
 
 ## Pink-even years ----
 mod.dat.PKE <- ECA_data %>% filter(Species %in% "PKE")
@@ -212,8 +210,8 @@ CU_plt <- lapply(vanc_isl, function(x) plot_forest_disturance_timeseries_inset(x
 vanc_isl_plot <- ggpubr::ggarrange(plotlist = CU_plt, ncol = 2, nrow = 2)
 vanc_isl_plot
 
-# ggsave(vanc_isl_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/ECA_CU_PKE_Van_south_coast.png",
-#        width = 6, height = 4, units = "in")
+ggsave(vanc_isl_plot,  filename = here("output_figures_tables","forest_supplement","ECA_CU_PKE_Van_south_coast.png"),
+       width = 6, height = 4, units = "in")
 
 ### Haida Gwaii and North coast ----
 haida_ac <- paste0("PKE-", seq(7, 13))
@@ -233,8 +231,8 @@ CU_plt <- lapply(haida_ac, function(x) plot_forest_disturance_timeseries_inset(x
 haida_plot <- ggarrange(plotlist = CU_plt, ncol = 3, nrow = 2)
 haida_plot
 
-# ggsave(haida_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/ECA_CU_PKE_haida_gwa.png",
-#        width = 9, height = 4, units = "in")
+ggsave(haida_plot,  filename = here("output_figures_tables","forest_supplement","ECA_CU_PKE_haida_gwa.png"),
+       width = 9, height = 4, units = "in")
 
 
 # Cumulative Disturbed Area panel plots ----
@@ -255,8 +253,8 @@ CU_plt <- lapply(vanc_isl, function(x) plot_forest_disturance_timeseries_inset(x
 vanc_isl_plot <- ggarrange(plotlist = CU_plt, ncol = 4, nrow = 4)
 vanc_isl_plot
 
-# ggsave(vanc_isl_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/CD_CU_CHUM_Vanc_Isl.png",
-#        width = 12, height = 8, units = "in")
+ggsave(vanc_isl_plot,  filename = here("output_figures_tables","forest_supplement","CD_CU_CHUM_Vanc_Isl.png"),
+       width = 12, height = 8, units = "in")
 
 ### Haida Gwaii isl and north coast ----
 hgwai <-  paste0("CM-", seq(18, 32))
@@ -275,9 +273,9 @@ CU_plt <- lapply(vanc_isl, function(x) plot_forest_disturance_timeseries_inset(x
 
 hgwai_plot <- ggarrange(plotlist = CU_plt, ncol = 4, nrow = 4)
 
-# ggsave(hgwai_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/CD_CU_CHUM_hgwaii_Isl.png",
-#        width = 12, height = 8, units = "in")
-# 
+ggsave(hgwai_plot,  filename = here("output_figures_tables","forest_supplement","CD_CU_CHUM_hgwaii_Isl.png"),
+       width = 12, height = 8, units = "in")
+
 
 
 ## Pink-odd year ----
@@ -300,8 +298,8 @@ CU_plt <- lapply(vanc_isl, function(x) plot_forest_disturance_timeseries_inset(x
 vanc_isl_plot <- ggarrange(plotlist = CU_plt, ncol = 3, nrow = 2)
 vanc_isl_plot
 
-# ggsave(vanc_isl_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/CD_CU_PKO_Vanc_Isl.png",
-#        width = 9, height = 4, units = "in")
+ggsave(vanc_isl_plot,  filename = here("output_figures_tables","forest_supplement","CD_CU_PKO_Vanc_Isl.png"),
+       width = 9, height = 4, units = "in")
 
 ### Haida Gwaii isl and north coast ----
 #' *PKO-11, PKO-10, PKO-09* \ only PKO-09 contains salmon recruit information
@@ -322,8 +320,8 @@ CU_plt <- lapply(hgwai, function(x) plot_forest_disturance_timeseries_inset(x,
 hgwai_plot <- ggarrange(plotlist = CU_plt, ncol = 4, nrow = 3)
 hgwai_plot
 
-# ggsave(hgwai_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/CD_CU_PKO_hgwaii_Isl.png",
-#        width = 12, height = 6, units = "in")
+ggsave(hgwai_plot,  filename = here("output_figures_tables","forest_supplement","CD_CU_PKO_hgwaii_Isl.png"),
+       width = 12, height = 6, units = "in")
 
 ## Pink-even years ----
 ### Vancouver Island south and central coast ----
@@ -344,8 +342,8 @@ CU_plt <- lapply(vanc_isl, function(x) plot_forest_disturance_timeseries_inset(x
 vanc_isl_plot <- ggarrange(plotlist = CU_plt, ncol = 2, nrow = 2)
 vanc_isl_plot
 
-# ggsave(vanc_isl_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/CD_CU_PKE_Van_south_coast.png",
-#        width = 6, height = 4, units = "in")
+ggsave(vanc_isl_plot,  filename = here("output_figures_tables","forest_supplement","CD_CU_PKE_Van_south_coast.png"),
+       width = 6, height = 4, units = "in")
 
 
 ### Haida Gwaii and North coast ----
@@ -366,7 +364,7 @@ CU_plt <- lapply(haida_ac, function(x) plot_forest_disturance_timeseries_inset(x
 haida_plot <- ggarrange(plotlist = CU_plt, ncol = 3, nrow = 2)
 haida_plot
 
-# ggsave(haida_plot,  filename = "forestry_data_compilation/Plots/forest_supplement/CD_CU_PKE_haida_gwa.png",
-#        width = 9, height = 4, units = "in")
+ggsave(haida_plot,  filename = here("output_figures_tables","forest_supplement","CD_CU_PKE_haida_gwa.png"),
+       width = 9, height = 4, units = "in")
 
 # end 
