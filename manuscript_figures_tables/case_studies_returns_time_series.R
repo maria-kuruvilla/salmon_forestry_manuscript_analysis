@@ -7,7 +7,7 @@
 ## Date Created: 2026-05-05
 
 ## Required packages
-list.of.packages <- c("tidyverse", "extrafont", "lubridate", "ggplot2", "sf", "qs", "openxlsx", "cowplot", "rnaturalearth", "ggpubr", "scales") 
+list.of.packages <- c("tidyverse", "extrafont", "lubridate", "ggplot2", "sf", "qs", "openxlsx", "cowplot", "rnaturalearth", "ggpubr", "scales", "here") 
 
 #What packages need to be installed?
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[, "Package"])] 
@@ -20,20 +20,21 @@ if (length(new.packages)) {
 ## Loading libraries
 invisible(lapply(list.of.packages, library, character.only = TRUE))
 
-source("forestry_data_compilation/r_functions/plot_returns_ECA_CPD.R")
+source(here("manuscript_figures_tables","r_functions", "plot_returns_ECA_CPD.R"))
 
 # Load case studies information ----
 # Forestry time series
-forestry_data <- read_csv("forestry_data_compilation/inputs/forestry_data/forestry_data_timeseries.csv")
+forestry_data <- read_csv(here("forestry_data_compilation", "forestry_data_timeseries.csv"))
 
 ECA_viner <- forestry_data %>%
   filter(LINEAR_FEATURE_ID ==  88067322) # Viner Sound
 
 # Chum salmon
-chum_dat_plt <- read_csv("forestry_data_compilation/inputs/salmon_datasets_plotting/CM_case_studies_data.csv")
+chum_dat_plt <- read_csv(here("salmon_forestry_data_analysis", "data", "salmon_datasets_plotting", "CM_case_studies_data.csv"))
 
 # Pink salmon (both even and odd years)
-pink_dat_plot <- read_csv("forestry_data_compilation/inputs/salmon_datasets_plotting/PK_case_studies_data.csv")
+pink_dat_plot <- read_csv(here("salmon_forestry_data_analysis", "data", "salmon_datasets_plotting", "PK_case_studies_data.csv"))
+
 
 # Chum Salmon Plots ----
 plots <- split(chum_dat_plt, chum_dat_plt$River) %>%
@@ -57,8 +58,11 @@ plots <- split(pink_dat_plot, pink_dat_plot$River) %>%
   lapply(., function(x)     returns_ECA_CPD_plot(dat_plot = x, 
                                                  river_str = unique(x$River), 
                                                  return_plot = T,
-                                                 save_plot = F,
+                                                 save_plot = T,
+                                                 filename = here("output_figures_tables","forest_supplement","case_studies", paste0(unique(x$River),".png")), 
                                                  species_label = "Pink",
+                                                 width = 8, 
+                                                 height = 5,
                                                  add_points = T,
                                                  units = "in") + guides(color = guide_legend(nrow = 2)))
 
@@ -88,7 +92,5 @@ forest_dist_viner_plt <- ggplot(ECA_viner, aes(x = year )) +
 
 forest_dist_viner_plt
 
-# ggsave(plot = forest_dist_viner_plt,  filename = paste0("forestry_data_compilation/Plots/forest_supplement/case_studies/viner_sound_forest_disturbance.png"),
-#        width = 8, 
-#        height = 5)
+ggsave(plot = forest_dist_viner_plt,  filename = here("output_figures_tables","forest_supplement","case_studies", "viner_sound_forest_disturbance.png"), width = 8, height = 5)
 # End

@@ -11,7 +11,7 @@
 
  
 # Required packages ----
-list.of.packages <- c("tidyverse", "extrafont", "lubridate", "ggplot2", "sf", "qs", "openxlsx", "stringi","rnaturalearth", "scales", "ggpubr", "giscoR", "rmapshaper", "patchwork") 
+list.of.packages <- c("tidyverse", "extrafont", "lubridate", "ggplot2", "sf", "qs", "openxlsx", "stringi","rnaturalearth", "scales", "ggpubr", "giscoR", "rmapshaper", "patchwork", "here") 
  
 # What packages need to be installed?
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[, "Package"])] 
@@ -27,16 +27,16 @@ invisible(lapply(list.of.packages, library, character.only = TRUE))
 scale_round <- function(x) round(x, digits = 2)
 wrapper <- function(x, ...) paste(stri_wrap(x, ...), collapse = "\n")
 
-source("forestry_data_compilation/r_functions/plot_returns_ECA_CPD.R")
+source(here("manuscript_figures_tables","r_functions", "plot_returns_ECA_CPD.R"))
 
 # Read-in Natural Resource districts 
-nr_dist <- st_read(dsn = "forestry_data_compilation/inputs/salmon_datasets_plotting/nat_res_districts.gpkg")
-
+nr_dist <- st_read(dsn = here("salmon_forestry_data_analysis", "data", "salmon_datasets_plotting", "nat_res_districts.gpkg"))
+                   
 # Salmon watersheds and ECA & CDA stats
-pop_sheds <- st_read(dsn = "forestry_data_compilation/inputs/salmon_datasets_plotting/salmon_watersheds.gpkg")
-
+pop_sheds <- st_read(dsn =  here("salmon_forestry_data_analysis", "data", "salmon_datasets_plotting", "salmon_watersheds.gpkg"))
+                       
 # Chum salmon
-chum_dat_plt <- read_csv("forestry_data_compilation/inputs/salmon_datasets_plotting/CM_case_studies_data.csv")
+chum_dat_plt <- read_csv(here("salmon_forestry_data_analysis", "data", "salmon_datasets_plotting", "CM_case_studies_data.csv"))
 
 # Data for plot
 world <- ne_countries(scale='medium',returnclass = 'sf')
@@ -49,14 +49,14 @@ USA <- subset(world, admin == "United States of America")
 split(chum_dat_plt, chum_dat_plt$River) %>%
   lapply(., function(x) returns_ECA_CPD_plot(dat_plot = x, river_str = unique(x$River), 
                                              save_plot = T,  
-                                             filename = paste0("forestry_data_compilation/Plots/manuscript_figures/regional_plot/", unique(x$River),".png"), 
+                                             filename = here("output_figures_tables","regional_plot/", paste0(unique(x$River),".png")), 
                                              width = 5, 
                                              height = 2.5, 
                                              units = "in"))
 
 returns_ECA_CPD_plot(dat_plot = chum_dat_plt, river_str = "NIMPKISH RIVER",
                      save_plot = F,
-                     filename = paste0("forestry_data_compilation/Plots/manuscript_figures/regional_plot/", unique(x$River),".png"),
+                     filename = here("output_figures_tables", "regional_plot/",  paste0(unique(x$River),".png")),
                      width = 5*0.75,
                      height = 2.5*0.75,
                      units = "in")
@@ -148,7 +148,7 @@ base_map <- ggplot() +
 
 b2 <- base_map + inset_element(wld_map, left = 0.71, bottom = 0.04, right = 1.085, top = .12, align_to = "plot")
 
-# ggsave(plot = b2, filename = "forestry_data_compilation/Plots/manuscript_figures/regional_plot/base_CPD_bin_map2_Feb26.png", width = 16, height = 12, units = "in")
+ggsave(plot = b2, filename = here("output_figures_tables","regional_plot", "base_CPD_bin_map2_Feb26.png"), width = 16, height = 12, units = "in")
 
 # Coastwide trends in equivalent clearcut area and cumulative disturbed area ----
 ## Data frame with specific data and events
@@ -185,7 +185,7 @@ text_arrows <- data.frame(x.st = c(1890, 1912, 1970, 2008, 2010, 1935, 1970),
 text_arrows$name <- as.factor(text_note$name)
 
 #' These estimations of ECA between 1820 to 2022 do not consider permanent disturbance. For plot only.
-ECA_estimates_NPD <- read_csv("forestry_data_compilation/inputs/forestry_data/forestry_data_without_perm_dist_timeseries.csv") 
+ECA_estimates_NPD <- read_csv(here("forestry_data_compilation", "forestry_data_without_perm_dist_timeseries.csv"))  
 
 eca_NPD <- ECA_estimates_NPD %>%
   rename(outlet_lfid  = LINEAR_FEATURE_ID ,
@@ -194,8 +194,8 @@ eca_NPD <- ECA_estimates_NPD %>%
          outlet_lfid = as.character(outlet_lfid), 
          ECA_year = as.numeric(ECA_year))
 
-metaECA_NPD <- read_csv("forestry_data_compilation/inputs/forestry_data/forestry_data_without_perm_dist_metadata.csv")
-
+metaECA_NPD <- read_csv(here("forestry_data_compilation", "forestry_data_without_perm_dist_metadata.csv")) 
+  
 metaECA_NPD <- select(metaECA_NPD, outlet_lfid = this_lfid, portion_reporting_vri_cover1_missing) %>%
   mutate(  outlet_lfid = as.character(outlet_lfid))
 
@@ -333,7 +333,6 @@ ECA_plot.with.inset_NPD <- CU_ECA_NPD + patchwork::inset_element(inset.plt,
 x11()
 ECA_plot.with.inset_NPD
 
-# ggsave(ECA_plot.with.inset_NPD,  filename = "forestry_data_compilation/Plots/manuscript_figures/Forest_disturbance_Region_1880_No_PD_feb26.png",
-#        width = 9, height = 8, units = "in")
+ggsave(ECA_plot.with.inset_NPD,  filename =  here("output_figures_tables","regional_plot","Forest_disturbance_Region_1880_No_PD_feb26.png"), width = 9, height = 8, units = "in")
 
 # END
