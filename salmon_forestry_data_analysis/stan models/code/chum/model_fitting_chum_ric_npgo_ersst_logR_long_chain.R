@@ -140,8 +140,8 @@ if(Sys.info()[7] == "mariakur") {
             here('salmon_forestry_data_analysis','stan models', 'outs', 'summary',
                  'ric_chm_eca_ocean_covariates_logR_long_chain_trial.csv'))
   
-  ric_chm_eca_npgo_sst$save_object(here('salmon_forestry_data_analysis','stan models', 'outs', 'fits','
-                                        ric_chm_eca_ocean_covariates_logR_long_chain_trial.RDS'))
+  ric_chm_eca_npgo_sst$save_object(here('salmon_forestry_data_analysis','stan models', 'outs', 
+  'fits','ric_chm_eca_ocean_covariates_logR_long_chain_trial.RDS'))
   
   post_ric_chm_eca_npgo_sst=ric_chm_eca_npgo_sst$draws(variables=c('b_for','b_for_cu','b_for_rv',
                                                            'b_npgo','b_npgo_cu','b_npgo_rv',
@@ -192,8 +192,8 @@ if(Sys.info()[7] == "mariakur") {
   print("Running on local machine")
   ric_chm_cpd_npgo_sst <- mric$sample(data=dl_chm_cpd_npgo_sst,
                                   chains = 2, 
-                                  iter_warmup = 100,
-                                  iter_sampling = 200,
+                                  iter_warmup = 10,
+                                  iter_sampling = 20,
                                   refresh = 10,
                                   adapt_delta = 0.999,
                                   max_treedepth = 20)
@@ -201,8 +201,8 @@ if(Sys.info()[7] == "mariakur") {
   write.csv(ric_chm_cpd_npgo_sst$summary(),
             here('salmon_forestry_data_analysis','stan models', 'outs', 'summary',
                  'ric_chm_cpd_ocean_covariates_logR_long_chain_trial.csv'))
-  ric_chm_cpd_npgo_sst$save_object(here('salmon_forestry_data_analysis','stan models','fits',
-                                        'ric_chm_cpd_ocean_covariates_logR_long_chain_trial.RDS'))
+  ric_chm_cpd_npgo_sst$save_object(here('salmon_forestry_data_analysis','stan models','outs',
+                                        'fits','ric_chm_cpd_ocean_covariates_logR_long_chain_trial.RDS'))
   
   post_ric_chm_cpd_npgo_sst=ric_chm_cpd_npgo_sst$draws(variables=c('b_for','b_for_cu','b_for_rv',
                                                            'b_npgo','b_npgo_cu','b_npgo_rv',

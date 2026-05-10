@@ -172,8 +172,8 @@ if(Sys.info()[7] == "mariakur") {
   print("Running on local machine")
   ric_pk_eca_st <- mric_p_st$sample(data=dl_pk_eca,
                                       chains = 1,
-                                      iter_warmup = 20,
-                                      iter_sampling =50,
+                                      iter_warmup = 10,
+                                      iter_sampling =20,
                                       refresh = 10,
                                       adapt_delta = 0.95,
                                       max_treedepth = 20)
@@ -232,8 +232,8 @@ if(Sys.info()[7] == "mariakur") {
   print("Running on local machine")
   ric_pk_cpd_st <- mric_p_st$sample(data=dl_pk_cpd,
                                     chains = 1,
-                                    iter_warmup = 20,
-                                    iter_sampling =50,
+                                    iter_warmup = 10,
+                                    iter_sampling =20,
                                     refresh = 10,
                                     adapt_delta = 0.95,
                                     max_treedepth = 20,
