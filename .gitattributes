@@ -4,3 +4,6 @@ salmon_data_compilation/Ecofish-SCVI-assembly/Data/NuSEDS/*.csv filter=lfs diff=
 salmon_data_compilation/Ecofish-SCVI-assembly/Data/NuSEDS/aopen-data-portaljanuary-2019nuseds_report_definitions.csv filter=lfs diff=lfs merge=lfs -text
 /salmon_data_compilation/Ecofish-SCVI-assembly/Data/NuSEDS/aopen-data-portaljanuary-2019nuseds_report_definitions.csv filter=lfs diff=lfs merge=lfs -text
 /salmon_data_compilation/Ecofish-SCVI-assembly/Data/Processed/Salmon_RS_river_CU_souce.csv filter=lfs diff=lfs merge=lfs -text
+salmon_forestry_data_analysis/stan[[:space:]]models/outs/posterior/*.csv filter=lfs diff=lfs merge=lfs -text
+/salmon_forestry_data_analysis/stan[[:space:]]models/outs/fits/*.RDS filter=lfs diff=lfs merge=lfs -text
+salmon_forestry_data_analysis/stan[[:space:]]models/outs/fits/*.RDS filter=lfs diff=lfs merge=lfs -text

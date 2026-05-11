@@ -47,3 +47,6 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+#Large files
+salmon_forestry_data_analyis/stan models/outs/fits/
