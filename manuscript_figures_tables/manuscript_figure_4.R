@@ -1206,7 +1206,7 @@ ggsave(here('output_figures_tables','manuscript_fig4_may2026_chum_pink_ricker.pd
        units = 'in',
        dpi = 300)
 
-ggsave(here('output_figures_tables','manuscript_fig4_may2026_chum_pink_ricker.pdf'),
+ggsave(here('output_figures_tables','manuscript_fig4_may2026_chum_pink_ricker.png'),
        plot = plot_pink_chum_w_title2,
        width = 8,
        height = 12,

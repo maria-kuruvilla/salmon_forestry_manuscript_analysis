@@ -15,8 +15,8 @@ if (length(new.packages)) {
 invisible(lapply(list.of.packages, library, character.only = TRUE))
 
 # Load population sheds ----
-pop_sheds <- st_read(dsn = "data/processed/Max_ECA_sheds_Nov_2024.gpkg")  # Note that there are 1746 polygons, but only 1745 have VRI information in 2022.
-pop_sheds <- st_read(dsn = "forestry_data_compilation/inputs/salmon_datasets_plotting/salmon_watersheds.gpkg")
+# pop_sheds <- st_read(dsn = "data/processed/Max_ECA_sheds_Nov_2024.gpkg")  # Note that there are 1746 polygons, but only 1745 have VRI information in 2022.
+pop_sheds <- st_read(dsn = "salmon_forestry_data_analysis/data/salmon_datasets_plotting/salmon_watersheds.gpkg")
 
 
 # Get Canada 
@@ -93,7 +93,9 @@ bc_region_wtrs <- ggplot() +
   geom_sf(data = USA, fill = "grey90", color = NA) +
   
   # Regional colors layer
-  geom_sf(data = pop_sheds, aes(fill = Region), linewidth = 0.1, color = "#d3d3d350") +
+  geom_sf(data = pop_sheds, aes(fill = Region), 
+          # linewidth = 0.1, color = "#d3d3d350"
+          ) +
   
   # Plot Window
   coord_sf(crs = st_crs(pop_sheds), xlim = c(b["xmin"] - 30000, b["xmax"] + 30000) , ylim = c(b["ymin"] - 4000, b["ymax"])) +
@@ -139,7 +141,10 @@ bc_region_wtrs_simple <- ggplot() +
   geom_sf(data = USA, fill = "grey90", color = NA) +
   
   # Regional colors layer
-  geom_sf(data = pop_sheds, aes(fill = Region), linewidth = 0.1, color = "#d3d3d350") +
+  geom_sf(data = pop_sheds, aes(fill = Region, color = Region), 
+          linewidth = 0, 
+          # color = "#d3d3d350"
+          ) +
   
   # Plot Window
   coord_sf(crs = st_crs(pop_sheds), xlim = c(b["xmin"] - 30000, b["xmax"] + 30000) , ylim = c(b["ymin"] - 4000, b["ymax"])) +
@@ -164,7 +169,9 @@ bc_region_wtrs_simple
 lookup <- read.csv(here("forestry_data_compilation", "inputs","salmon_datasets_plotting", "salmon_watersheds_lookup.csv"))
 
 
-ch20rsc <- read.csv(here("data", "processed", "chum_SR_20_hat_yr_w_ersst.csv"))
+ch20rsc <- read.csv(here('salmon_forestry_data_analysis','data','chum_SR_20_hat_yr_w_ersst.csv'))
+
+
 # ch20rsc <- read.csv(here("origional-ecofish-data-models","Data","Processed",
 #                          "chum_SR_20_hat_yr_w_ocean_covariates.csv"))
 
@@ -293,8 +300,8 @@ productivity_decline_cu_df_new <- function(posterior, effect, species){
   
 }
 
-ric_chm_cpd_ocean_covariates_logR_long_chain <- read.csv(here("data", "processed", 
-                                                              "ric_chm_cpd_ocean_covariates_logR_long_chain.csv"),check.names=F)
+ric_chm_cpd_ocean_covariates_logR_long_chain <- read.csv(here('salmon_forestry_data_analysis','stan models','outs','posterior',
+                                                              'ric_chm_cpd_ocean_covariates_logR_long_chain.csv'),check.names=F)
 
 ric_chm_cpd_productivity_decline_cu_new <- productivity_decline_cu_df_new(ric_chm_cpd_ocean_covariates_logR_long_chain, 
                                                                           effect = "cpd", species = "chum")    
@@ -332,446 +339,6 @@ Region_relevel_custom <- c("South Coast","South Island", "Campbell River",
 Region_relevel_custom2 <- c("South Island","Campbell River",  "South Coast",
                            "North Island - Central Coast",
                            "North Coast - Skeena", "Haida Gwaii")
-
-
-
-
-cu_forest_plot_new <- ric_chm_cpd_productivity_decline_cu_new %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                                              select(CU, Region, CU_name, Y_LAT) %>% 
-                                                                              group_by(CU, Region) %>%
-                                                                              summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)) %>% 
-                                                                              filter(n_data == max(n_data)),
-                                                                            by = c("CU" = "CU_name")) %>% 
-  arrange(Y_LAT, Region, desc(productivity_50)) %>%
-  mutate(CU2 = factor(CU, levels = CU)) %>%
-  ggplot(aes(x = CU, y = productivity_50)) +
-  geom_point(aes(y = productivity_50, x = CU2, color = Region), 
-             fill = "white", size = 3, alpha = 0.5) +
-  geom_errorbar(aes(ymin = productivity_025, ymax = productivity_975, color = Region),
-                # color = '#516479', 
-                width = 0, alpha = 0.5, size = 1) +
-  geom_errorbar(aes(ymin = productivity_25, ymax = productivity_75, color = Region ), 
-                # color = '#516479',
-                width = 0, alpha = 0.7, size = 2) +
-  #add estimated median decline to the right of each error bar
-  geom_text(aes(label = paste(round(productivity_50,1),"%")), 
-            hjust = -0.25, 
-            vjust = -0.35,
-            size = 3, color = "gray20") +
-  #add dashed v line
-  scale_color_manual(name = 'Region', values = colrs) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  coord_flip() +
-  # scale_color_manual(name = 'Model type', values = c('independent alpha' = 'cadetblue', 'hierarchical alpha' = 'coral', 'hierarchical alpha - ricker' = 'darkgoldenrod')) +
-  labs(#title = 'Estimated percent change in CU-level productivity',
-    x = 'Conservation Unit',
-    y = 'Change in recruitment (%)') +
-  theme_classic() +
-  theme(legend.position = "none",
-        # axis.text.y = element_blank(),
-        # axis.ticks.y = element_blank(),
-        axis.text.y = element_text(size = 8),
-        plot.title = element_text(hjust = 0.5, size = 18),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16))+
-  inset_element(bc_region_wtrs_simple , 
-                left = 0.65, bottom = 0.65, right = 1, top = 1, align_to = "plot")+
-  theme(legend.position = "none",
-        panel.background = element_rect(fill='transparent', color = NA),
-        plot.background = element_rect(fill='transparent'))
-  
-
-
-cu_forest_plot_new
-ggsave(here("Plots","manuscript_march2026_chum_ricker_cda_recruitment_decline_by_cu_forest_plot_arranged_latitude.png"),
-       cu_forest_plot_new, width = 6, height = 6, bg = "white")
-
-
-cu_forest_plot_new2 <- ric_chm_cpd_productivity_decline_cu_new %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                                              select(CU, Region, CU_name, Y_LAT) %>% 
-                                                                              group_by(CU, Region) %>%
-                                                                              summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)) %>% 
-                                                                              filter(n_data == max(n_data)),
-                                                                            by = c("CU" = "CU_name")) %>% 
-  mutate(Region2 = factor(Region, levels = Region_relevel_custom)) %>%
-  arrange(Region2, (productivity_50)) %>%
-  mutate(CU2 = factor(CU, levels = CU)) %>%
-  ggplot(aes(x = CU, y = productivity_50)) +
-  geom_point(aes(y = productivity_50, x = CU2, color = Region), 
-             fill = "white", size = 3, alpha = 0.5) +
-  geom_errorbar(aes(ymin = productivity_025, ymax = productivity_975, color = Region),
-                # color = '#516479', 
-                width = 0, alpha = 0.5, size = 1) +
-  geom_errorbar(aes(ymin = productivity_25, ymax = productivity_75, color = Region ), 
-                # color = '#516479',
-                width = 0, alpha = 0.7, size = 2) +
-  #add estimated median decline to the right of each error bar
-  geom_text(aes(label = paste(round(productivity_50,1),"%")), 
-            hjust = -0.25, 
-            vjust = -0.35,
-            size = 3, color = "gray20") +
-  #add dashed v line
-  scale_color_manual(name = 'Region', values = colrs) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  ylim(-100, 100) +
-  coord_flip() +
-  # scale_color_manual(name = 'Model type', values = c('independent alpha' = 'cadetblue', 'hierarchical alpha' = 'coral', 'hierarchical alpha - ricker' = 'darkgoldenrod')) +
-  labs(#title = 'Estimated percent change in CU-level productivity',
-    x = 'Conservation Unit',
-    y = 'Change in recruitment (%)') +
-  theme_classic() +
-  theme(legend.position = "none",
-        # axis.text.y = element_blank(),
-        # axis.ticks.y = element_blank(),
-        axis.text.y = element_text(size = 8),
-        plot.title = element_text(hjust = 0.5, size = 18),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16))+
-  inset_element(bc_region_wtrs_simple , 
-                left = 0.65, bottom = 0.65, right = 1, top = 1, align_to = "plot")+
-  theme(legend.position = "none",
-        legend.key.size = unit(0.15, "cm"),
-        legend.text = element_text(size = 8),
-        legend.background = element_rect(fill = "transparent", size = 0.5),
-        panel.background = element_rect(fill='transparent', color = NA),
-        plot.background = element_rect(fill='transparent'))
-
-
-
-cu_forest_plot_new2
-
-ggsave(here("Plots","manuscript_march2026_chum_ricker_cda_recruitment_decline_by_cu_forest_plot_arranged_region.png"),
-       cu_forest_plot_new2, width = 6, height = 6, bg = "white")
-
-
-cu_forest_plot_new3 <- ric_chm_cpd_productivity_decline_cu_new %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                                               select(CU, Region, CU_name, Y_LAT) %>% 
-                                                                               group_by(CU, Region) %>%
-                                                                               summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)) %>% 
-                                                                               filter(n_data == max(n_data)),
-                                                                             by = c("CU" = "CU_name")) %>% 
-  mutate(Region2 = factor(Region, levels = Region_relevel_custom)) %>%
-  arrange(desc(productivity_50)) %>%
-  mutate(CU2 = factor(CU, levels = CU)) %>%
-  ggplot(aes(x = CU, y = productivity_50)) +
-  geom_point(aes(y = productivity_50, x = CU2, color = Region), 
-             fill = "white", size = 3, alpha = 0.5) +
-  geom_errorbar(aes(ymin = productivity_025, ymax = productivity_975, color = Region),
-                # color = '#516479', 
-                width = 0, alpha = 0.5, size = 1) +
-  geom_errorbar(aes(ymin = productivity_25, ymax = productivity_75, color = Region ), 
-                # color = '#516479',
-                width = 0, alpha = 0.7, size = 2) +
-  #add estimated median decline to the right of each error bar
-  geom_text(aes(label = paste(round(productivity_50,1),"%")), 
-            hjust = -0.25, 
-            vjust = -0.35,
-            size = 3, color = "gray20") +
-  #add dashed v line
-  scale_color_manual(name = 'Region', values = colrs) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  ylim(-100, 100) +
-  coord_flip() +
-  # scale_color_manual(name = 'Model type', values = c('independent alpha' = 'cadetblue', 'hierarchical alpha' = 'coral', 'hierarchical alpha - ricker' = 'darkgoldenrod')) +
-  labs(#title = 'Estimated percent change in CU-level productivity',
-    x = 'Conservation Unit',
-    y = 'Change in recruitment (%)') +
-  theme_classic() +
-  theme(legend.position = "none",
-        # axis.text.y = element_blank(),
-        # axis.ticks.y = element_blank(),
-        axis.text.y = element_text(size = 8),
-        plot.title = element_text(hjust = 0.5, size = 18),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16))+
-  inset_element(bc_region_wtrs_simple , 
-                left = 0.65, bottom = 0.65, right = 1, top = 1, align_to = "plot")+
-  theme(legend.position = "none",
-        legend.key.size = unit(0.15, "cm"),
-        legend.text = element_text(size = 8),
-        legend.background = element_rect(fill = "transparent", size = 0.5),
-        panel.background = element_rect(fill='transparent', color = NA),
-        plot.background = element_rect(fill='transparent'))
-
-
-
-cu_forest_plot_new3
-ggsave(here("Plots","manuscript_march2026_chum_ricker_cda_recruitment_decline_by_cu_forest_plot_arranged_descending.png"),
-       cu_forest_plot_new3, width = 6, height = 6, bg = "white")
-
-
-
-
-cu_forest_plot_new4 <- ric_chm_cpd_productivity_decline_cu_new %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                                               select(CU, Region, CU_name, Y_LAT) %>% 
-                                                                               group_by(CU, Region) %>%
-                                                                               summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)) %>%  
-                                                                               arrange(desc(n_data)) %>% 
-                                                                               mutate(Region_n = case_when(n_data == max(n_data) ~ "Region_1",
-                                                                                                           n_data == nth(n_data,3) ~ "Region_3",
-                                                                                                           n_data == nth(n_data,2) ~ "Region_2")),
-                                                                             by = c("CU" = "CU_name")) %>% #View()
-  select(-n_data) %>% 
-  pivot_wider(names_from = Region_n, values_from = Region, id_cols=c(CU, productivity_50, productivity_025, productivity_975,
-                                                                     productivity_25, productivity_75, forestry)) %>%# View()
-  mutate(Region_2 = ifelse(is.na(Region_2), Region_1, Region_2)) %>%
-  # mutate(Region_3 = ifelse(is.na(Region_3), Region_1, Region_3)) %>%
-  mutate(Region2 = factor(Region_1, levels = Region_relevel_custom2)) %>%
-  arrange(Region2, (productivity_50)) %>%
-  mutate(CU2 = factor(CU, levels = CU)) %>%
-  ggplot(aes(x = CU, y = productivity_50)) +
-  geom_point(aes(y = productivity_50, x = CU2, color = Region_2), 
-             fill = "white", size = 3, alpha = 0.5) +
-  geom_errorbar(aes(ymin = productivity_025, ymax = productivity_975, color = Region_1),
-                # color = '#516479', 
-                width = 0, alpha = 0.5, size = 1) +
-  geom_errorbar(aes(ymin = productivity_25, ymax = productivity_75, color = Region_2), 
-                # color = '#516479',
-                width = 0, alpha = 0.7, size = 2) +
-  #add estimated median decline to the right of each error bar
-  geom_text(aes(label = paste(round(productivity_50,1),"%")), 
-            hjust = -0.25, 
-            vjust = -0.35,
-            size = 3, color = "gray20") +
-  #add dashed v line
-  scale_color_manual(name = 'Region', values = colrs) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  ylim(-100, 100) +
-  coord_flip() +
-  # scale_color_manual(name = 'Model type', values = c('independent alpha' = 'cadetblue', 'hierarchical alpha' = 'coral', 'hierarchical alpha - ricker' = 'darkgoldenrod')) +
-  labs(#title = 'Estimated percent change in CU-level productivity',
-    x = 'Conservation Unit',
-    y = 'Change in recruitment (%)') +
-  theme_classic() +
-  theme(legend.position = "none",
-        # axis.text.y = element_blank(),
-        # axis.ticks.y = element_blank(),
-        axis.text.y = element_text(size = 8),
-        plot.title = element_text(hjust = 0.5, size = 18),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16))+
-  inset_element(bc_region_wtrs_simple , 
-                left = 0.65, bottom = 0.65, right = 1, top = 1, align_to = "plot")+
-  theme(legend.position = c(0.5,-0.15),
-        legend.direction = "vertical",
-        legend.key.size = unit(0.25, "cm"),
-        legend.text.position = "left",
-        legend.text = element_text(size = 7, hjust=1),
-        legend.background = element_rect(fill = "transparent", size = 0.5),
-        panel.background = element_rect(fill='transparent', color = NA),
-        plot.background = element_rect(fill='transparent'))
-
-
-
-cu_forest_plot_new4
-
-
-
-cu_forest_plot_new5 <- ric_chm_cpd_productivity_decline_cu_new %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                                               select(CU, Region, CU_name, Y_LAT) %>% 
-                                                                               group_by(CU, Region) %>%
-                                                                               summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)) %>%  
-                                                                               arrange(desc(n_data)) %>% 
-                                                                               mutate(Region_n = case_when(n_data == max(n_data) ~ "Region_1",
-                                                                                                           n_data == nth(n_data,3) ~ "Region_3",
-                                                                                                           n_data == nth(n_data,2) ~ "Region_2")),
-                                                                             by = c("CU" = "CU_name")) %>% #View()
-  select(-n_data) %>% 
-  pivot_wider(names_from = Region_n, values_from = Region, id_cols=c(CU, productivity_50, productivity_025, productivity_975,
-                                                                     productivity_25, productivity_75, forestry)) %>%# View()
-  mutate(Region_2 = ifelse(is.na(Region_2), Region_1, Region_2)) %>%
-  # mutate(Region_3 = ifelse(is.na(Region_3), Region_1, Region_3)) %>%
-  mutate(Region2 = factor(Region_1, levels = Region_relevel_custom2)) %>%
-  arrange(Region2, (productivity_50)) %>%
-  
-  mutate(CU2 = factor(CU, levels = CU)) %>%
-  ggplot(aes(x = CU, y = productivity_50)) +
-  geom_point(aes(y = productivity_50, x = CU2, color = Region_1), 
-             fill = "white", size = 3, alpha = 0.5) +
-  geom_errorbar(aes(ymin = productivity_25, ymax = productivity_75, color = Region_1),
-                # color = '#516479', 
-                width = 0, alpha = 0.5, size = 2) +
-  geom_errorbar(aes(ymin = productivity_025, ymax = productivity_975, color = Region_2), 
-                # color = '#516479',
-                width = 0, alpha = 0.7, size = 1) +
-  #add estimated median decline to the right of each error bar
-  geom_text(aes(label = paste(round(productivity_50,1),"%")), 
-            hjust = -0.25, 
-            vjust = -0.35,
-            size = 3, color = "gray20") +
-  #add dashed v line
-  scale_color_manual(name = 'Region', values = colrs) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray40") +
-  ylim(-100, 100) +
-  coord_flip() +
-  # scale_color_manual(name = 'Model type', values = c('independent alpha' = 'cadetblue', 'hierarchical alpha' = 'coral', 'hierarchical alpha - ricker' = 'darkgoldenrod')) +
-  labs(#title = 'Estimated percent change in CU-level productivity',
-    x = 'Conservation Unit',
-    y = 'Change in recruitment (%)') +
-  theme_classic() +
-  theme(legend.position = "none",
-        # axis.text.y = element_blank(),
-        # axis.ticks.y = element_blank(),
-        axis.text.y = element_text(size = 8),
-        plot.title = element_text(hjust = 0.5, size = 18),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16))+
-  inset_element(bc_region_wtrs_simple , 
-                left = 0.65, bottom = 0.65, right = 1, top = 1, align_to = "plot")+
-  theme(legend.position = c(0.5,-0.15),
-        legend.direction = "vertical",
-        legend.key.size = unit(0.25, "cm"),
-        legend.text.position = "left",
-        legend.text = element_text(size = 7, hjust=1),
-        legend.background = element_rect(fill = "transparent", size = 0.5),
-        panel.background = element_rect(fill='transparent', color = NA),
-        plot.background = element_rect(fill='transparent'))
-
-
-
-cu_forest_plot_new5
-
-ggsave(here("Plots","manuscript_march2026_chum_ricker_cda_recruitment_decline_by_cu_forest_plot_arranged_descending_2.png"),
-       cu_forest_plot_new5, width = 6, height = 6, bg = "white")
-
-
-ric_chm_cpd_productivity_decline_cu_new %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                        select(CU, Region, CU_name, Y_LAT) %>% 
-                                                        group_by(CU, Region) %>%
-                                                        summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)) %>%  
-                                                        arrange(desc(n_data)) %>% 
-                                                        mutate(Region_n = case_when(n_data == max(n_data) ~ "1",
-                                                                                    n_data == nth(n_data,3) ~ "3",
-                                                                                    n_data == nth(n_data,2) ~ "2")),
-                                                      by = c("CU" = "CU_name")) %>% #View()
-  # select(-n_data) %>% 
-  pivot_wider(names_from = Region_n, values_from = c(Region,Y_LAT, n_data), id_cols=c(CU, productivity_50, productivity_025, productivity_975,
-                                                                                      productivity_25, productivity_75, forestry)) %>% 
-  mutate(Region_2 = ifelse(is.na(Region_2), Region_1, Region_2)) %>%
-  # mutate(Region_3 = ifelse(is.na(Region_3), Region_1, Region_3)) %>%
-  mutate(Region_new = factor(Region_1, levels = Region_relevel_custom2)) %>%
-  # arrange(Region2, (productivity_50)) %>%
-  arrange(Region_new, Y_LAT_1) %>%
-  mutate(CU2 = factor(CU, levels = CU)) %>% View() 
-
-cu_forest_plot_new6 <- ric_chm_cpd_productivity_decline_cu_new %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                                               select(CU, Region, CU_name, Y_LAT) %>% 
-                                                                               group_by(CU, Region) %>%
-                                                                               summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)) %>%  
-                                                                               arrange(desc(n_data)) %>% 
-                                                                               mutate(Region_n = case_when(n_data == max(n_data) ~ "1",
-                                                                                                           n_data == nth(n_data,3) ~ "3",
-                                                                                                           n_data == nth(n_data,2) ~ "2")),
-                                                                             by = c("CU" = "CU_name")) %>% #View()
-  # select(-n_data) %>% 
-  pivot_wider(names_from = Region_n, values_from = c(Region,Y_LAT, n_data), id_cols=c(CU, productivity_50, productivity_025, productivity_975,
-                                                                                      productivity_25, productivity_75, forestry)) %>% 
-  mutate(Region_2 = ifelse(is.na(Region_2), Region_1, Region_2)) %>%
-  # mutate(Region_3 = ifelse(is.na(Region_3), Region_1, Region_3)) %>%
-  mutate(Region_new = factor(Region_1, levels = Region_relevel_custom2)) %>%
-  
-  # arrange(Region2, (productivity_50)) %>%
-  arrange(Region_new, Y_LAT_1) %>%
-  mutate(n_data_1 = ifelse(is.na(n_data_1),0,n_data_1),
-         n_data_2 = ifelse(is.na(n_data_2),0,n_data_2),
-         n_data_3 = ifelse(is.na(n_data_3),0,n_data_3)) %>% 
-  mutate(CU2 = factor(CU, levels = CU)) %>%
-  mutate(CU2_numeric = as.numeric(CU2)*10, pie_chart_position = productivity_025-10) %>% 
-  ggplot(aes(y = CU2_numeric, x = productivity_50)) +
-  geom_point(aes(x = productivity_50, y = CU2_numeric, color = Region_1), 
-             fill = "white", size = 3, alpha = 0.5) +
-  geom_errorbar(aes(xmin = productivity_25, xmax = productivity_75, color = Region_1),
-                # color = '#516479', 
-                width = 0, alpha = 0.5, size = 2) +
-  geom_errorbar(aes(xmin = productivity_025, xmax = productivity_975, color = Region_2), 
-                # color = '#516479',
-                width = 0, alpha = 0.7, size = 1) +
-  #add estimated median decline to the right of each error bar
-  geom_text(aes(label = paste(round(productivity_50,1),"%")), 
-            hjust = -0.25, 
-            vjust = -0.35,
-            size = 3, color = "gray20") +
-  
-  #add scatterpie plot next to each errorbar to show number of rivers within each CU from each region
-  geom_scatterpie(data= foo2, aes(y = CU2_numeric, x = pie_chart_position, r = rep(4,24*6)),
-                  # bg_circle_radius=1.5,
-                  # size = 1,
-                  #aes(x = Y_LAT_1, y = productivity_50), 
-                  cols = c("North Island - Central Coast", "South Coast", "North Coast - Skeena",
-                           "Haida Gwaii", "Campbell River", "South Island")
-                  #use same colours as map
-                  # color = colrs_w_alpha
-                 
-                   
-                  
-  ) + #color = NA, alpha = 0.8, size = 0.5) +
-  coord_equal() +
-  #add dashed v line
-  scale_color_manual(name = 'Region', values = colrs) +
-  scale_fill_manual(name = 'Region', values = colrs_w_alpha) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
-  xlim(-100, 100) +
-  scale_y_continuous(
-    breaks = foo2$CU2_numeric,
-    labels = foo2$CU2
-  ) +
-  # coord_equal() +
-  # scale_color_manual(name = 'Model type', values = c('independent alpha' = 'cadetblue', 'hierarchical alpha' = 'coral', 'hierarchical alpha - ricker' = 'darkgoldenrod')) +
-  labs(#title = 'Estimated percent change in CU-level productivity',
-    x = 'Conservation Unit',
-    y = 'Change in recruitment (%)') +
-  theme_classic() +
-  theme(legend.position = "none",
-        # axis.text.y = element_blank(),
-        # axis.ticks.y = element_blank(),
-        axis.text.y = element_text(size = 8),
-        plot.title = element_text(hjust = 0.5, size = 18),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16))+
-  inset_element(bc_region_wtrs_simple , 
-                left = 0.65, bottom = 0.65, right = 1, top = 1, align_to = "plot")+
-  theme(legend.position = c(0.5,-0.15),
-        legend.direction = "vertical",
-        legend.key.size = unit(0.25, "cm"),
-        legend.text.position = "left",
-        legend.text = element_text(size = 7, hjust=1),
-        legend.background = element_rect(fill = "transparent", size = 0.5),
-        panel.background = element_rect(fill='transparent', color = NA),
-        plot.background = element_rect(fill='transparent'))
-
-
-
-
-cu_forest_plot_new6
-
-ggsave(here("Plots","manuscript_march2026_chum_ricker_cda_recruitment_decline_by_cu_forest_plot_arranged_latitude_trial.png"),
-       cu_forest_plot_new6, width = 6, height = 6, bg = "white")
-
-#make scatter pie plot with colors for number of ricers within each region of the CU
-
-foo <- ric_chm_cpd_productivity_decline_cu_new %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                               select(CU, Region, CU_name, Y_LAT) %>% 
-                                                               group_by(CU, Region) %>%
-                                                               summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)) %>%  
-                                                               arrange(desc(n_data)) %>% 
-                                                               mutate(Region_n = case_when(n_data == max(n_data) ~ "1",
-                                                                                           n_data == nth(n_data,3) ~ "3",
-                                                                                           n_data == nth(n_data,2) ~ "2")),
-                                                             by = c("CU" = "CU_name")) %>% 
-  # select(-n_data) %>% 
-  pivot_wider(names_from = Region_n, values_from = c(Region,Y_LAT, n_data), id_cols=c(CU, productivity_50, productivity_025, productivity_975,
-                                                                                      productivity_25, productivity_75, forestry)) %>% 
-  mutate(Region_2 = ifelse(is.na(Region_2), Region_1, Region_2)) %>%
-  # mutate(Region_3 = ifelse(is.na(Region_3), Region_1, Region_3)) %>%
-  mutate(Region_new = factor(Region_1, levels = Region_relevel_custom2)) %>%
-  
-  # arrange(Region2, (productivity_50)) %>%
-  arrange(Region_new, Y_LAT_1) %>%
-  mutate(n_data_1 = ifelse(is.na(n_data_1),0,n_data_1),
-         n_data_2 = ifelse(is.na(n_data_2),0,n_data_2),
-         n_data_3 = ifelse(is.na(n_data_3),0,n_data_3)) %>% 
-  mutate(CU2 = factor(CU, levels = CU)) %>%
-  mutate(CU2_numeric = as.numeric(CU2)*10, pie_chart_position = productivity_025-10) 
 
 
 
@@ -886,76 +453,11 @@ cu_forest_plot_new7 <- foo2 %>%
 
 cu_forest_plot_new7
 
-ggsave(here("Plots","manuscript_march2026_chum_ricker_cda_recruitment_decline_by_cu_forest_plot_arranged_latitude_pie_chart.png"),
+ggsave(here("output_figures_tables","manuscript_fig5_may2026_chum_ricker_cda_recruitment_decline_by_cu_forest_plot_arranged_latitude_pie_chart.png"),
        cu_forest_plot_new7, width = 6, height = 6, bg = "white")
 
-ggsave(here("Plots","manuscript_fig5.pdf"),
+ggsave(here("output_figures_tables","manuscript_fig5.pdf"),
        cu_forest_plot_new7, width = 6, height = 6, bg = "white",dpi = 300)
 
-
-cu_forest_plot_new8 <- foo %>%  
-  ggplot(aes(y = CU2_numeric, x = productivity_50)) +
-  geom_point(aes(x = productivity_50, y = CU2_numeric, color = Region_1), 
-             fill = "white", size = 3, alpha = 0.5) +
-  geom_errorbar(aes(xmin = productivity_25, xmax = productivity_75, color = Region_1),
-                # color = '#516479', 
-                width = 0, alpha = 0.5, size = 2) +
-  geom_errorbar(aes(xmin = productivity_025, xmax = productivity_975, color = Region_1), 
-                # color = '#516479',
-                width = 0, alpha = 0.7, size = 1) +
-  #add estimated median decline to the right of each error bar
-  geom_text(aes(label = paste(round(productivity_50,1),"%")), 
-            hjust = -0.25, 
-            vjust = -0.35,
-            size = 3, color = "gray20") +
-  
-  #add scatterpie plot next to each errorbar to show number of rivers within each CU from each region
-  # geom_scatterpie(data= foo2, aes(y = CU2_numeric, x = pie_chart_position, r = rep(4,24*6)),
-  #                 # bg_circle_radius=1.5,
-  #                 # size = 1,
-  #                 #aes(x = Y_LAT_1, y = productivity_50), 
-  #                 cols = c("North Island - Central Coast", "South Coast", "North Coast - Skeena",
-  #                          "Haida Gwaii", "Campbell River", "South Island")
-  #                 #use same colours as map
-  #                 # color = colrs_w_alpha
-  # ) + #color = NA, alpha = 0.8, size = 0.5) +
-  coord_equal() +
-  #add dashed v line
-  scale_color_manual(name = 'Region', values = colrs) +
-  # scale_fill_manual(name = 'Region', values = colrs_w_alpha) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
-  xlim(-100, 100) +
-  scale_y_continuous(
-    breaks = foo2$CU2_numeric,
-    labels = foo2$CU2
-  ) +
-  # coord_equal() +
-  # scale_color_manual(name = 'Model type', values = c('independent alpha' = 'cadetblue', 'hierarchical alpha' = 'coral', 'hierarchical alpha - ricker' = 'darkgoldenrod')) +
-  labs(#title = 'Estimated percent change in CU-level productivity',
-    x = 'Conservation Unit',
-    y = 'Change in recruitment (%)') +
-  theme_classic() +
-  theme(legend.position = "none",
-        # axis.text.y = element_blank(),
-        # axis.ticks.y = element_blank(),
-        axis.text.y = element_text(size = 8),
-        plot.title = element_text(hjust = 0.5, size = 18),
-        axis.title.x = element_text(size = 16),
-        axis.title.y = element_text(size = 16))+
-  inset_element(bc_region_wtrs_simple , 
-                left = 0.65, bottom = 0.65, right = 1, top = 1, align_to = "plot")+
-  theme(legend.position = c(0.5,-0.15),
-        legend.direction = "vertical",
-        legend.key.size = unit(0.25, "cm"),
-        legend.text.position = "left",
-        legend.text = element_text(size = 7, hjust=1),
-        legend.background = element_rect(fill = "transparent", size = 0.5),
-        panel.background = element_rect(fill='transparent', color = NA),
-        plot.background = element_rect(fill='transparent'))
-
-
-
-
-cu_forest_plot_new8
 
 
