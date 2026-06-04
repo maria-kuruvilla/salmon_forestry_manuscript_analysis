@@ -1051,7 +1051,7 @@ plot_chum_E <- plot_productivity_decline_manuscript(posterior = ric_chm_cpd_ocea
                                                     effect = "cpd", model = "", hd = FALSE)+
   ylim(c(-75,75))+
   scale_x_continuous(labels = scales::percent_format(accuracy = 1, scale = 1))+
-  labs(y = "Change in recruitment (%)",
+  labs(y = "Change in productivity (%)",
        x = "Cumulative disturbed area")+
   theme(legend.position = c(0.95,0.99),
         legend.direction = "vertical",
@@ -1074,7 +1074,7 @@ plot_chum_F <- plot_productivity_decline_manuscript(posterior = ric_chm_eca_ocea
   ylim(c(-75,75))+
   #change x axis to go from 1 to 100 instead of 0 to 1
   scale_x_continuous(labels = scales::percent_format(accuracy = 1))+
-  labs(y = "Change in recruitment (%)")+
+  labs(y = "Change in productivity (%)")+
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 # 
@@ -1155,7 +1155,7 @@ plot_pink_K <- plot_productivity_decline_manuscript(posterior = ric_pk_cpd_ersst
                                                     model = "", hd = FALSE)+
   ylim(c(-75,75))+
   scale_x_continuous(labels = scales::percent_format(accuracy = 1, scale = 1))+
-  labs(y = "Change in recruitment (%)",
+  labs(y = "Change in productivity (%)",
        x = "Cumulative disturbed area")+
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
@@ -1167,7 +1167,7 @@ plot_pink_L <- plot_productivity_decline_manuscript(posterior = ric_pk_eca_ersst
                                                     model = "", hd = FALSE)+
   scale_x_continuous(labels = scales::percent_format(accuracy = 1))+
   ylim(c(-75,75))+
-  labs(y = "Change in recruitment (%)")+
+  labs(y = "Change in productivity (%)")+
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 

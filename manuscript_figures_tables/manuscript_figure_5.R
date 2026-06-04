@@ -428,7 +428,7 @@ cu_forest_plot_new7 <- foo2 %>%
   # scale_color_manual(name = 'Model type', values = c('independent alpha' = 'cadetblue', 'hierarchical alpha' = 'coral', 'hierarchical alpha - ricker' = 'darkgoldenrod')) +
   labs(#title = 'Estimated percent change in CU-level productivity',
     y = 'Conservation Unit',
-    x = 'Change in chum recruitment (%)') +
+    x = 'Change in chum productivity (%)') +
   theme_classic() +
   theme(legend.position = "none",
         # axis.text.y = element_blank(),
