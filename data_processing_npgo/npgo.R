@@ -87,4 +87,61 @@ ggsave(here('output_figures_tables','correlation_matrix_npgo_sst_eca.png'), widt
 
 write.csv(ch20r_w_npgo, here('salmon_forestry_data_analysis','data','chum_SR_20_hat_yr_w_ersst_npgo.csv'), row.names = FALSE)
 
+# read pink data
+#even year pinks
+pk10r_e <-  read.csv(here('salmon_forestry_data_analysis','data',"pke_SR_10_hat_yr_w_ersst.csv"))
+
+#odd year pinks
+pk10r_o <-  read.csv(here('salmon_forestry_data_analysis','data',"pko_SR_10_hat_yr_w_ersst.csv"))
+
+
+# left join with npgo data
+
+
+pk10r_e_w_npgo <- pk10r_e %>% 
+  left_join(npgo_data_winter %>% select(winter_npgo, BroodYear), join_by(BroodYear))
+
+pk10r_o_w_npgo <- pk10r_o %>%
+  left_join(npgo_data_winter %>% select(winter_npgo, BroodYear), join_by(BroodYear))
+
+
+pk10r_o_w_npgo$Broodline='Odd'
+pk10r_e_w_npgo$Broodline='Even'
+
+
+pk10r_w_npgo=rbind(pk10r_e_w_npgo,pk10r_o_w_npgo)
+
+
+ggplot(pk10r_w_npgo, aes(x = npgo, y = winter_npgo)) +
+  geom_point(alpha = 0.1) +
+  geom_abline() +
+  theme_classic()
+
+# correlation matrix
+
+pk10r_w_npgo %>% 
+  select(winter_npgo, spring_ersst, disturbedarea_prct_cs) %>% 
+  ggpairs(aes(alpha = 0.01),
+          columnLabels = c("Winter NPGO", "Spring SST", "CDA %")) +
+  # change name of the variables shown in strip
+  
+  theme_classic()
+
+ggsave(here('output_figures_tables','correlation_matrix_npgo_sst_cda_pink.png'), width = 8, height = 6)
+
+pk10r_w_npgo %>% 
+  select(winter_npgo, spring_ersst, ECA_age_proxy_forested_only) %>% 
+  ggpairs(aes(alpha = 0.1),
+          columnLabels = c("Winter NPGO", "Spring SST", "ECA")) +
+  theme_classic()
+
+ggsave(here('output_figures_tables','correlation_matrix_npgo_sst_eca_pink.png'), width = 8, height = 6)
+
+#save the new dataset
+
+write.csv(pk10r_e_w_npgo , here('salmon_forestry_data_analysis','data','pke_SR_10_hat_yr_w_ersst_npgo.csv'), row.names = FALSE)
+write.csv(pk10r_o_w_npgo , here('salmon_forestry_data_analysis','data','pko_SR_10_hat_yr_w_ersst_npgo.csv'), row.names = FALSE)
+
+
+
 
