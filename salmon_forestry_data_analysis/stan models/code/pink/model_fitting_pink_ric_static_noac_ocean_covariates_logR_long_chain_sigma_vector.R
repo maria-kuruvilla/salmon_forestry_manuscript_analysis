@@ -29,10 +29,10 @@ mric_p_st=cmdstanr::cmdstan_model(file_ric_st) #compile stan code to C++
 
 
 #even year pinks
-pk10r_e <-  read.csv(here('salmon_forestry_data_analysis','data',"pke_SR_10_hat_yr_w_ersst.csv"))
+pk10r_e <-  read.csv(here('salmon_forestry_data_analysis','data',"pke_SR_10_hat_yr_w_ersst_npgo.csv"))
 
 #odd year pinks
-pk10r_o <-  read.csv(here('salmon_forestry_data_analysis','data',"pko_SR_10_hat_yr_w_ersst.csv"))
+pk10r_o <-  read.csv(here('salmon_forestry_data_analysis','data',"pko_SR_10_hat_yr_w_ersst_npgo.csv"))
 
 options(mc.cores=8)
 
@@ -70,8 +70,8 @@ pk10r_e$sqrt.CPD.std=(pk10r_e$sqrt.CPD-mean(pk10r_e$sqrt.CPD))/sd(pk10r_e$sqrt.C
 
 
 #standardize npgo
-pk10r_o$npgo.std=(pk10r_o$npgo-mean(pk10r_o$npgo))/sd(pk10r_o$npgo)
-pk10r_e$npgo.std=(pk10r_e$npgo-mean(pk10r_e$npgo))/sd(pk10r_e$npgo)
+pk10r_o$winter_npgo.std=(pk10r_o$winter_npgo-mean(pk10r_o$winter_npgo))/sd(pk10r_o$winter_npgo)
+pk10r_e$winter_npgo.std=(pk10r_e$winter_npgo-mean(pk10r_e$winter_npgo))/sd(pk10r_e$winter_npgo)
 
 pk10r_o$sst.std = (pk10r_o$spring_ersst-mean(pk10r_o$spring_ersst))/sd(pk10r_o$spring_ersst)
 pk10r_e$sst.std = (pk10r_e$spring_ersst-mean(pk10r_e$spring_ersst))/sd(pk10r_e$spring_ersst)
@@ -130,7 +130,7 @@ dl_pk_eca=list(N=nrow(pk10r),
                S=pk10r$Spawners,
                logR=log(pk10r$Recruits),
                forest_loss=pk10r$sqrt.ECA.std,
-               npgo=pk10r$npgo.std,
+               npgo=pk10r$winter_npgo.std,
                sst=pk10r$sst.std,
                start_y=N_s[,1],
                end_y=N_s[,2],
@@ -155,7 +155,7 @@ dl_pk_cpd=list(N=nrow(pk10r),
                S=pk10r$Spawners,
                logR=log(pk10r$Recruits),
                forest_loss=pk10r$sqrt.CPD.std,
-               npgo=pk10r$npgo.std,
+               npgo=pk10r$winter_npgo.std,
                sst=pk10r$sst.std,
                start_y=N_s[,1],
                end_y=N_s[,2],
