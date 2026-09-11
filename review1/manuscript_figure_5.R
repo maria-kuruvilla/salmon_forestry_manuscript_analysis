@@ -489,6 +489,117 @@ ggsave(here("output_figures_tables","manuscript_fig5_review1.pdf"),
 # calculate the latest (2022) disturbance levels for all salmon rivers 
 # within each CU even when it is not in the model
 
+
+# first check whether the difference between 60% CDA and 0% CDA is the same in the 
+# theoretical cda dataset and the original dataset
+
+theoretical_cpd <- seq(0,100, length.out = 100)
+
+#to calculate no forestry in the standardized scale
+theoretical_cpd_sqrt <- sqrt(theoretical_cpd)
+
+theoretical_cpd_sqrt_std = (theoretical_cpd_sqrt-mean(theoretical_cpd_sqrt))/sd(theoretical_cpd_sqrt)
+
+#make df for theoretical values
+theoretical_df <- data.frame(theoretical_cpd, theoretical_cpd_sqrt_std)
+
+#difference between 60% and 0%
+(theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - 60))] - 
+  theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - 0))])
+
+(ch20rsc$sqrt.CPD.std[which.min(abs(ch20rsc$disturbedarea_prct_cs - 60))] - 
+    ch20rsc$sqrt.CPD.std[which.min(abs(ch20rsc$disturbedarea_prct_cs - 0))])
+
+((sqrt(60) - mean(ch20rsc$sqrt.CPD))/sd(ch20rsc$sqrt.CPD)) - ((sqrt(0) - mean(ch20rsc$sqrt.CPD))/sd(ch20rsc$sqrt.CPD)) 
+
+sqrt(60)/sd(ch20rsc$sqrt.CPD)
+
+# first make correction for the productivity decline estimate
+productivity_decline_cu_df_new_2022 <- function(posterior, effect, species){
+  
+  if(species == "chum"){
+    df <- ch20rsc_w_outlet_lfid
+    
+  } else if(species == "pink"){
+    df <- pk10r
+  }
+  
+  full_productivity <- NULL
+  
+  for (i in 1:length(unique(df$CU_n))){
+    
+    cu <- unique(df$CU_n)[i]
+    
+    cu_data <- df %>% filter(CU_n == cu)
+    
+    b_cu <- posterior %>% select(starts_with("b_for_cu")) %>%
+      select(ends_with(paste0("[",cu,"]")))
+    
+    
+    # cpd_sqrt_std_cu <- max(cu_data$sqrt.CPD.std) # should not be using max from CU
+    #minimum forestry possible - 0
+    real_cpd_cu <- cu_data %>% group_by(River) %>% 
+      filter(disturbedarea_prct_cs == max(disturbedarea_prct_cs)) %>% 
+      distinct(disturbedarea_prct_cs, haarea_prct_cs) %>% 
+      ungroup %>% 
+      summarize(mean = mean(disturbedarea_prct_cs), mean_2022 = mean(haarea_prct_cs))
+    
+    real_cpd_sqrt_std_cu <- cu_data %>% group_by(River) %>% 
+      filter(sqrt.CPD.std == max(sqrt.CPD.std)) %>% 
+      distinct(sqrt.CPD.std) %>% 
+      ungroup %>% 
+      summarize(mean = mean(sqrt.CPD.std))
+    
+    # current_forestry <- theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - real_cpd_cu$mean))]
+    # current_forestry_2022 <- theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - real_cpd_cu$mean_2022))]
+    
+    #this amounts to the difference between standardized values of forestry and no forestry
+    forestry_diff <- sqrt(real_cpd_cu$mean)/sd(df$sqrt.CPD)
+    
+    forestry_diff_2022 <- sqrt(real_cpd_cu$mean_2022)/sd(df$sqrt.CPD)
+    
+    
+  
+    
+    productivity <- (exp(as.matrix(b_cu[,1])%*%
+                           (forestry_diff_2022)))*100 - 100
+    
+    productivity_median <- apply(productivity,2,median)
+    
+    productivity_median_df <- data.frame(CU = unique(cu_data$CU_name),
+                                         productivity_50 = apply(productivity,2,median),
+                                         productivity_25 = apply(productivity,2,quantile, probs = 0.25),
+                                         productivity_75 = apply(productivity,2,quantile, probs = 0.75),
+                                         productivity_025 = apply(productivity,2,quantile, probs = 0.025),
+                                         productivity_975 = apply(productivity,2,quantile, probs = 0.975),
+                                         # productivity_025_hdi = apply(productivity,2, hdi, ci = 0.95)[[1]]$CI_low,
+                                         # productivity_975_hdi = apply(productivity,2, hdi, ci = 0.95)[[1]]$CI_high,
+                                         forestry = real_cpd_cu$mean,
+                                         CU_n = unique(cu_data$CU_n))
+    
+    full_productivity <- rbind(full_productivity, productivity_median_df)
+    
+    
+  }
+  
+  
+  return(full_productivity)
+  
+  
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
 # can keep the same function but use a different dataset?
 
 
