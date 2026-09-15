@@ -1,9 +1,5 @@
-# use the most recent disturbance values from the 
-# forestry_data_timeseries dataset
-
-# first use salmon_lookup.csv, then use LINEAR_FEATURE_ID to join both 
-# datasets, group by River, use the most recent haarea_prct_cs
-
+# use all salmon watersheds within the CU to calculate
+# the latest average (2022) CDA within the CU
 
 # Required packages ----
 list.of.packages <- c("tidyverse", "extrafont", "giscoR", "ggplot2", "sf", "rmapshaper", "rnaturalearth", "patchwork", "here", "scatterpie") 
@@ -20,9 +16,232 @@ if (length(new.packages)) {
 ## Loading libraries
 invisible(lapply(list.of.packages, library, character.only = TRUE))
 
-# Load population sheds ----
-# pop_sheds <- st_read(dsn = "data/processed/Max_ECA_sheds_Nov_2024.gpkg")  # Note that there are 1746 polygons, but only 1745 have VRI information in 2022.
+# read the forestry_data_timeseries data
+forestry_data_timeseries <- read.csv(here("forestry_data_compilation", "inputs",
+                                          "forestry_data", 
+                                          "forestry_data_timeseries.csv"))
+
+
+
+forestry_data_timeseries_2022 <- forestry_data_timeseries %>% 
+  group_by(group,LINEAR_FEATURE_ID) %>% 
+  filter(year == max(year)) %>%
+  select(haarea_prct_cs, year) %>% 
+  rename(haarea_prct_cs_2022 = haarea_prct_cs, year_2022 = year) 
+
+ch20rsc <- read.csv(here('salmon_forestry_data_analysis','data','chum_SR_20_hat_yr_w_ersst_npgo.csv'))
+
+#two rivers with duplicated names:
+ch20rsc$River=ifelse(ch20rsc$WATERSHED_CDE=='950-169400-00000-00000-0000-0000-000-000-000-000-000-000','SALMON RIVER 2',ch20rsc$River)
+ch20rsc$River=ifelse(ch20rsc$WATERSHED_CDE=="915-486500-05300-00000-0000-0000-000-000-000-000-000-000",'LAGOON CREEK 2',ch20rsc$River)
+
+
+ch20rsc=ch20rsc[order(factor(ch20rsc$River),ch20rsc$BroodYear),]
+
+ch20rsc$River_n <- as.numeric(factor(ch20rsc$River))
+
+#normalize ECA 2 - square root transformation (ie. sqrt(x))
+ch20rsc$sqrt.ECA=sqrt(ch20rsc$ECA_age_proxy_forested_only)
+ch20rsc$sqrt.ECA.std=(ch20rsc$sqrt.ECA-mean(ch20rsc$sqrt.ECA))/sd(ch20rsc$sqrt.ECA)
+
+#normalize CPD 2 - square root transformation (ie. sqrt(x))
+ch20rsc$sqrt.CPD=sqrt(ch20rsc$disturbedarea_prct_cs)
+ch20rsc$sqrt.CPD.std=(ch20rsc$sqrt.CPD-mean(ch20rsc$sqrt.CPD))/sd(ch20rsc$sqrt.CPD)
+
+ch20rsc$npgo.std=(ch20rsc$npgo-mean(ch20rsc$npgo))/sd(ch20rsc$npgo)
+ch20rsc$sst.std=(ch20rsc$spring_ersst-mean(ch20rsc$spring_ersst))/sd(ch20rsc$spring_ersst)
+
+cu = distinct(ch20rsc,.keep_all = T)
+
+cu_n = as.numeric(factor(cu$CU))
+
+ch20rsc$CU_n <- cu_n
+
+# make CU_NAME values Title case instead of all caps
+ch20rsc$CU_name <- str_to_title(ch20rsc$CU_NAME)
+ch20rsc$CU_name <- ifelse(ch20rsc$CU_name == "East Hg", "East Haida Gwaii", ch20rsc$CU_name)
+
+# forestry timeseries has linear feature id and the ch20rsc has GFE_ID
+# I need a dataset that has both to combine the two datasets
+
+
+lookup_og <- read.csv(here("forestry_data_compilation", "inputs","salmon_datasets_plotting", "salmon_watersheds_lookup.csv"))
+
+# check number of unique combinations GFE_ID, LINEAR_FEATURE_ID
+
+length(unique(lookup_og$LINEAR_FEATURE_ID))
+length(unique(lookup_og$GFE_ID))
+lookup_og %>% 
+  filter(Species == "CM") %>% 
+  select(LINEAR_FEATURE_ID, Species, CU, River) %>% 
+  distinct() %>% 
+  summarize(num = n_distinct(LINEAR_FEATURE_ID))
+# this dataset has n=1142
+
+lookup_og %>% 
+  filter(Species == "CM") %>% 
+  select(GFE_ID, Species, CU, River) %>% 
+  distinct() %>% 
+  summarize(num = n_distinct(GFE_ID))
+# this dataset has n=1230
+
+forestry_data_timeseries_2022 %>% 
+  ungroup() %>% 
+  select(LINEAR_FEATURE_ID) %>% 
+  distinct() %>% 
+  summarise(num = n())
+#this dataset has n=1745
+
+ch20rsc %>% 
+  select(GFE_ID) %>% 
+  distinct() %>% 
+  summarize(num = n())
+# this dataset has 374
+
+#check if all the GFE_ID in ch20rsc is in lookup_og
+ch20rsc %>% 
+  select(GFE_ID) %>% 
+  distinct() %>% 
+  filter(!GFE_ID %in% lookup_og$GFE_ID)
+
+# check if all LINEAR_FEATURE_ID in lookup_og is in forestry_data_timeseries_2022
+
+lookup_og %>% 
+  filter(Species == "CM") %>% 
+  select(LINEAR_FEATURE_ID, GFE_ID, CU, River) %>% 
+  distinct() %>% 
+  filter(!LINEAR_FEATURE_ID %in% forestry_data_timeseries_2022$LINEAR_FEATURE_ID)
+
+# make one dataset with GFE_ID, LINEAR_FEATURE_ID, CU, River, Species, haarea_prct_cs_2022
+
+full_lookup <- lookup_og %>% 
+  filter(Species == "CM") %>% 
+  select(LINEAR_FEATURE_ID, GFE_ID, CU, River) %>% 
+  distinct() %>% 
+  full_join(forestry_data_timeseries_2022 %>% 
+              select(LINEAR_FEATURE_ID, haarea_prct_cs_2022), by = "LINEAR_FEATURE_ID")
+
 pop_sheds <- st_read(dsn = "salmon_forestry_data_analysis/data/salmon_datasets_plotting/salmon_watersheds.gpkg")
+
+
+ch20rsc_w_outlet_lfid <- ch20rsc %>% 
+  left_join(full_lookup %>% select(CU, GFE_ID, LINEAR_FEATURE_ID, haarea_prct_cs_2022), by = c("CU" = "CU", "GFE_ID" = "GFE_ID")) %>% 
+  left_join(pop_sheds %>% select(outlet_lfid, Region) %>% mutate(outlet_lfid = as.integer(outlet_lfid)), 
+            by = c("LINEAR_FEATURE_ID" = "outlet_lfid")) 
+
+
+# make a dataset with the latest (2022) average values of CDA for all CUs
+
+CDA_2022_CU <- full_lookup %>% 
+  group_by(CU, River) %>% 
+  select(haarea_prct_cs_2022) %>% 
+  group_by(CU) %>% 
+  summarize(mean_2022_CDA = mean(haarea_prct_cs_2022, na.rm = TRUE),
+            n_rivers = n())
+
+
+productivity_decline_cu_df_full_2022 <- function(posterior, CDA_2022_CU, effect, 
+                                                 species, full_2022 = FALSE,
+                                                 within_model_2022 = TRUE
+                                                 ){
+  
+  if(species == "chum"){
+    df <- ch20rsc_w_outlet_lfid
+    
+  } else if(species == "pink"){
+    df <- pk10r
+  }
+  
+  full_productivity <- NULL
+  
+  for (i in 1:length(unique(df$CU_n))){
+    
+    cu <- unique(df$CU_n)[i]
+    
+    cu_data <- df %>% filter(CU_n == cu)
+    
+    b_cu <- posterior %>% select(starts_with("b_for_cu")) %>%
+      select(ends_with(paste0("[",cu,"]")))
+    
+    
+    # cpd_sqrt_std_cu <- max(cu_data$sqrt.CPD.std) # should not be using max from CU
+    #minimum forestry possible - 0
+    real_cpd_cu <- cu_data %>% group_by(River) %>% 
+      filter(disturbedarea_prct_cs == max(disturbedarea_prct_cs)) %>% 
+      distinct(disturbedarea_prct_cs, haarea_prct_cs_2022) %>% 
+      ungroup %>% 
+      summarize(mean = mean(disturbedarea_prct_cs), mean_2022 = mean(haarea_prct_cs_2022)) 
+    
+    print(paste(cu_data$CU[1], cu_data$CU_NAME[1]))
+    
+    print(paste("2012 cda: ", real_cpd_cu$mean))
+    
+    print(paste("2022 cda: ", real_cpd_cu$mean_2022))
+    
+    real_full_cpd_cu <- CDA_2022_CU %>% filter(CU == cu_data$CU[1])
+    
+    print(paste("2022 full cda: ",real_full_cpd_cu$mean_2022_CDA))
+    
+    
+    # current_forestry <- theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - real_cpd_cu$mean))]
+    # current_forestry_2022 <- theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - real_cpd_cu$mean_2022))]
+    
+    #this amounts to the difference between standardized values of forestry and no forestry
+    
+    # if we are including all watersheds that are not in the model
+    if(full_2022){
+      forestry_diff <- sqrt(real_full_cpd_cu$mean_2022_CDA)/sd(df$sqrt.CPD)
+    } else if(within_model_2022){
+      forestry_diff <- sqrt(real_cpd_cu$mean_2022)/sd(df$sqrt.CPD)
+    } else{
+      forestry_diff <- sqrt(real_cpd_cu$mean)/sd(df$sqrt.CPD)
+    }
+    
+    
+    
+    
+    
+    
+    productivity <- (exp(as.matrix(b_cu[,1])%*%
+                           (forestry_diff)))*100 - 100
+    
+    productivity_median <- apply(productivity,2,median)
+    
+    productivity_median_df <- data.frame(CU = unique(cu_data$CU_name),
+                                         productivity_50 = apply(productivity,2,median),
+                                         productivity_25 = apply(productivity,2,quantile, probs = 0.25),
+                                         productivity_75 = apply(productivity,2,quantile, probs = 0.75),
+                                         productivity_025 = apply(productivity,2,quantile, probs = 0.025),
+                                         productivity_975 = apply(productivity,2,quantile, probs = 0.975),
+                                         # productivity_025_hdi = apply(productivity,2, hdi, ci = 0.95)[[1]]$CI_low,
+                                         # productivity_975_hdi = apply(productivity,2, hdi, ci = 0.95)[[1]]$CI_high,
+                                         forestry = real_cpd_cu$mean,
+                                         CU_n = unique(cu_data$CU_n))
+    
+    full_productivity <- rbind(full_productivity, productivity_median_df)
+    
+    
+  }
+  
+  
+  return(full_productivity)
+  
+  
+}
+
+ric_chm_cpd_ocean_covariates_logR_long_chain <- read.csv(here('salmon_forestry_data_analysis','stan models','outs','posterior',
+                                                              'ric_chm_cpd_ocean_covariates_logR_long_chain.csv'),check.names=F)
+
+ric_chm_cpd_productivity_decline_cu_full_2022 <- productivity_decline_cu_df_full_2022(ric_chm_cpd_ocean_covariates_logR_long_chain, 
+                                                                                   CDA_2022_CU, 
+                                                                                   effect = "cpd", 
+                                                                                   species ="chum",
+                                                                                   full_2022 = FALSE,
+                                                                                   within_model_2022 = TRUE)
+
+
+##### figure
+
 
 
 # Get Canada 
@@ -52,11 +271,11 @@ names(colrs) <- c("North Coast - Skeena",
                   "Campbell River",
                   "South Island")
 names(colrs_w_alpha) <- c("North Coast - Skeena",
-                  "South Coast",
-                  "Haida Gwaii",
-                  "North Island - Central Coast",
-                  "Campbell River",
-                  "South Island")
+                          "South Coast",
+                          "Haida Gwaii",
+                          "North Island - Central Coast",
+                          "Campbell River",
+                          "South Island")
 
 
 
@@ -92,53 +311,6 @@ wld_map <- ggplot(world) +
   theme_void()
 
 # Plot 
-bc_region_wtrs <- ggplot() +
-  
-  # Base map
-  geom_sf(data = Canada, fill = "grey90", color = NA) +
-  geom_sf(data = USA, fill = "grey90", color = NA) +
-  
-  # Regional colors layer
-  geom_sf(data = pop_sheds, aes(fill = Region), 
-          # linewidth = 0.1, color = "#d3d3d350"
-          ) +
-  
-  # Plot Window
-  coord_sf(crs = st_crs(pop_sheds), xlim = c(b["xmin"] - 30000, b["xmax"] + 30000) , ylim = c(b["ymin"] - 4000, b["ymax"])) +
-  
-  # Theme
-  scale_fill_manual(values = colrs) + 
-  scale_color_manual(values = colrs_w_alpha) +
-  
-  theme(panel.grid.major = element_line(colour = "aliceblue", linetype = "dashed", 
-                                        size = 0.5), 
-        panel.background = element_rect(fill = "aliceblue"), 
-        panel.border = element_rect(fill = NA, color = NA),
-        axis.text = element_blank(),
-        axis.ticks = element_blank(),
-        base_family = "ArcherPro Book",
-        legend.position = "bottom") +
-  
-  labs(x = "", y = "", color = "", fill = "") +
-  
-  # Spatial annotation
-  ggspatial::annotation_scale(
-    location = "br",
-    bar_cols = c("black", "white"),
-    text_family = "ArcherPro Book"
-  ) +
-  ggspatial::annotation_north_arrow(
-    location = "tr", which_north = "true",
-    # pad_x = unit(0.4, "in"), pad_y = unit(0.4, "in"),
-    style = ggspatial::north_arrow_nautical(
-      fill = c("black", "white"),
-      line_col = "black",
-      text_family = "ArcherPro Book"
-    )
-  )  + inset_element(wld_map, left = 0.05, bottom = 0.05, right = 0.3, top = .3, align_to = "plot")
-
-
-bc_region_wtrs
 
 bc_region_wtrs_simple <- ggplot() +
   
@@ -150,7 +322,7 @@ bc_region_wtrs_simple <- ggplot() +
   geom_sf(data = pop_sheds, aes(fill = Region, color = Region), 
           linewidth = 0, 
           # color = "#d3d3d350"
-          ) +
+  ) +
   
   # Plot Window
   coord_sf(crs = st_crs(pop_sheds), xlim = c(b["xmin"] - 30000, b["xmax"] + 30000) , ylim = c(b["ymin"] - 4000, b["ymax"])) +
@@ -170,221 +342,8 @@ bc_region_wtrs_simple <- ggplot() +
   
   labs(x = "", y = "", color = "", fill = "")
 
-bc_region_wtrs_simple
-
-lookup_og <- read.csv(here("forestry_data_compilation", "inputs","salmon_datasets_plotting", "salmon_watersheds_lookup.csv"))
-
-# read the forestry_data_timeseries data
-forestry_data_timeseries <- read.csv(here("forestry_data_compilation", "inputs",
-                                          "forestry_data", 
-                                          "forestry_data_timeseries.csv"))
 
 
-
-forestry_data_timeseries_2022 <- forestry_data_timeseries %>% 
-  group_by(group,LINEAR_FEATURE_ID) %>% 
-  filter(year == max(year)) %>%
-  select(haarea_prct_cs, year)
-
-lookup_w_forestry <- lookup_og %>% 
-  left_join(forestry_data_timeseries_2022, by = c("LINEAR_FEATURE_ID" = "LINEAR_FEATURE_ID"))
-rename(disturbedarea_prct_cs = haarea_prct_cs,
-         forestry_data_year = year)
-
-ch20rsc <- read.csv(here('salmon_forestry_data_analysis','data','chum_SR_20_hat_yr_w_ersst.csv'))
-
-
-# ch20rsc <- read.csv(here("origional-ecofish-data-models","Data","Processed",
-#                          "chum_SR_20_hat_yr_w_ocean_covariates.csv"))
-
-
-#two rivers with duplicated names:
-ch20rsc$River=ifelse(ch20rsc$WATERSHED_CDE=='950-169400-00000-00000-0000-0000-000-000-000-000-000-000','SALMON RIVER 2',ch20rsc$River)
-ch20rsc$River=ifelse(ch20rsc$WATERSHED_CDE=="915-486500-05300-00000-0000-0000-000-000-000-000-000-000",'LAGOON CREEK 2',ch20rsc$River)
-
-
-ch20rsc=ch20rsc[order(factor(ch20rsc$River),ch20rsc$BroodYear),]
-
-ch20rsc$River_n <- as.numeric(factor(ch20rsc$River))
-
-#normalize ECA 2 - square root transformation (ie. sqrt(x))
-ch20rsc$sqrt.ECA=sqrt(ch20rsc$ECA_age_proxy_forested_only)
-ch20rsc$sqrt.ECA.std=(ch20rsc$sqrt.ECA-mean(ch20rsc$sqrt.ECA))/sd(ch20rsc$sqrt.ECA)
-
-#normalize CPD 2 - square root transformation (ie. sqrt(x))
-ch20rsc$sqrt.CPD=sqrt(ch20rsc$disturbedarea_prct_cs)
-ch20rsc$sqrt.CPD.std=(ch20rsc$sqrt.CPD-mean(ch20rsc$sqrt.CPD))/sd(ch20rsc$sqrt.CPD)
-
-ch20rsc$npgo.std=(ch20rsc$npgo-mean(ch20rsc$npgo))/sd(ch20rsc$npgo)
-ch20rsc$sst.std=(ch20rsc$spring_ersst-mean(ch20rsc$spring_ersst))/sd(ch20rsc$spring_ersst)
-
-cu = distinct(ch20rsc,.keep_all = T)
-
-cu_n = as.numeric(factor(cu$CU))
-
-ch20rsc$CU_n <- cu_n
-
-# make CU_NAME values Title case instead of all caps
-ch20rsc$CU_name <- str_to_title(ch20rsc$CU_NAME)
-ch20rsc$CU_name <- ifelse(ch20rsc$CU_name == "East Hg", "East Haida Gwaii", ch20rsc$CU_name)
-
-
-
-lookup <- lookup_w_forestry %>% 
-  left_join(ch20rsc %>% select(GFE_ID, River_n, BroodYear, sqrt.CPD.std, Species, disturbedarea_prct_cs) %>% 
-              group_by(GFE_ID, River_n, Species) %>% #filter only max year
-              filter(BroodYear == max(BroodYear)) %>% unique(), by = c("GFE_ID","Species"))
-
-rivers <- lookup %>% select(River_n) %>%  filter(!is.na(River_n)) %>% pull(River_n) %>% unique()
-
-
-ch20rsc_w_outlet_lfid <- ch20rsc %>% 
-  left_join(lookup %>% select(CU, GFE_ID, Species, LINEAR_FEATURE_ID, haarea_prct_cs), by = c("CU" = "CU", "GFE_ID" = "GFE_ID", "Species" = "Species")) %>% 
-  left_join(pop_sheds %>% select(outlet_lfid, Region) %>% mutate(outlet_lfid = as.integer(outlet_lfid)), 
-            by = c("LINEAR_FEATURE_ID" = "outlet_lfid")) 
-
-# check
-ch20rsc_w_outlet_lfid %>% group_by(River) %>% 
-  filter(disturbedarea_prct_cs == max(disturbedarea_prct_cs)) %>% 
-  distinct(disturbedarea_prct_cs, haarea_prct_cs) %>% View()
-
-# redo CU-level estimated recruitment decline figure  ---------------------
-
-
-
-# first check whether the difference between 60% CDA and 0% CDA is the same in the 
-# theoretical cda dataset and the original dataset
-
-theoretical_cpd <- seq(0,100, length.out = 100)
-
-#to calculate no forestry in the standardized scale
-theoretical_cpd_sqrt <- sqrt(theoretical_cpd)
-
-theoretical_cpd_sqrt_std = (theoretical_cpd_sqrt-mean(theoretical_cpd_sqrt))/sd(theoretical_cpd_sqrt)
-
-#make df for theoretical values
-theoretical_df <- data.frame(theoretical_cpd, theoretical_cpd_sqrt_std)
-
-#difference between 60% and 0%
-(theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - 60))] - 
-  theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - 0))])
-
-(ch20rsc$sqrt.CPD.std[which.min(abs(ch20rsc$disturbedarea_prct_cs - 60))] - 
-    ch20rsc$sqrt.CPD.std[which.min(abs(ch20rsc$disturbedarea_prct_cs - 0))])
-
-((sqrt(60) - mean(ch20rsc$sqrt.CPD))/sd(ch20rsc$sqrt.CPD)) - ((sqrt(0) - mean(ch20rsc$sqrt.CPD))/sd(ch20rsc$sqrt.CPD)) 
-
-sqrt(60)/sd(ch20rsc$sqrt.CPD)
-
-# first make correction for the productivity decline estimate
-productivity_decline_cu_df_new_2022 <- function(posterior, effect, species){
-  
-  if(species == "chum"){
-    df <- ch20rsc_w_outlet_lfid
-    
-  } else if(species == "pink"){
-    df <- pk10r
-  }
-  
-  full_productivity <- NULL
-  
-  for (i in 1:length(unique(df$CU_n))){
-    
-    cu <- unique(df$CU_n)[i]
-    
-    CU_full <- df$CU[df$CU_n == cu]
-    
-    cu_data <- df %>% filter(CU_n == cu)
-    
-    b_cu <- posterior %>% select(starts_with("b_for_cu")) %>%
-      select(ends_with(paste0("[",cu,"]")))
-    
-    
-    # cpd_sqrt_std_cu <- max(cu_data$sqrt.CPD.std) # should not be using max from CU
-    #minimum forestry possible - 0
-    real_cpd_cu <- cu_data %>% group_by(River) %>% 
-      filter(disturbedarea_prct_cs == max(disturbedarea_prct_cs)) %>% 
-      distinct(disturbedarea_prct_cs, haarea_prct_cs) %>% 
-      ungroup %>% 
-      summarize(mean = mean(disturbedarea_prct_cs), mean_2022 = mean(haarea_prct_cs))
-    
-    real_cpd_sqrt_std_cu <- cu_data %>% group_by(River) %>% 
-      filter(sqrt.CPD.std == max(sqrt.CPD.std)) %>% 
-      distinct(sqrt.CPD.std) %>% 
-      ungroup %>% 
-      summarize(mean = mean(sqrt.CPD.std))
-    
-    # current_forestry <- theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - real_cpd_cu$mean))]
-    # current_forestry_2022 <- theoretical_df$theoretical_cpd_sqrt_std[which.min(abs(theoretical_df$theoretical_cpd - real_cpd_cu$mean_2022))]
-    
-    #this amounts to the difference between standardized values of forestry and no forestry
-    forestry_diff <- sqrt(real_cpd_cu$mean)/sd(df$sqrt.CPD)
-    
-    forestry_diff_2022 <- sqrt(real_cpd_cu$mean_2022)/sd(df$sqrt.CPD)
-    
-    
-  
-    
-    productivity <- (exp(as.matrix(b_cu[,1])%*%
-                           (forestry_diff_2022)))*100 - 100
-    
-    productivity_median <- apply(productivity,2,median)
-    
-    productivity_median_df <- data.frame(CU = unique(cu_data$CU_name),
-                                         productivity_50 = apply(productivity,2,median),
-                                         productivity_25 = apply(productivity,2,quantile, probs = 0.25),
-                                         productivity_75 = apply(productivity,2,quantile, probs = 0.75),
-                                         productivity_025 = apply(productivity,2,quantile, probs = 0.025),
-                                         productivity_975 = apply(productivity,2,quantile, probs = 0.975),
-                                         # productivity_025_hdi = apply(productivity,2, hdi, ci = 0.95)[[1]]$CI_low,
-                                         # productivity_975_hdi = apply(productivity,2, hdi, ci = 0.95)[[1]]$CI_high,
-                                         forestry = real_cpd_cu$mean,
-                                         CU_n = unique(cu_data$CU_n))
-    
-    full_productivity <- rbind(full_productivity, productivity_median_df)
-    
-    
-  }
-  
-  
-  return(full_productivity)
-  
-  
-}
-
-ric_chm_cpd_ocean_covariates_logR_long_chain <- read.csv(here('salmon_forestry_data_analysis','stan models','outs','posterior',
-                                                              'ric_chm_cpd_ocean_covariates_logR_long_chain.csv'),check.names=F)
-
-ric_chm_cpd_productivity_decline_cu_new_2022 <- productivity_decline_cu_df_new_2022(ric_chm_cpd_ocean_covariates_logR_long_chain, 
-                                                                                    effect = "cpd", species = "chum")    
-
-ric_chm_cpd_productivity_decline_cu_new_2022 %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                             select(CU, Region, CU_name) %>% 
-                                                             group_by(CU, Region) %>%
-                                                             summarize(n_data =n(), CU_name= first(CU_name)) %>% 
-                                                             filter(n_data == max(n_data)),
-                                                           by = c("CU" = "CU_name")
-)
-
-
-#specify the order of Regions based on the average productivity decline
-Region_relevel <- ric_chm_cpd_productivity_decline_cu_new_2022 %>% left_join(ch20rsc_w_outlet_lfid %>% 
-                                                                               select(CU, Region, CU_name, Y_LAT) %>% 
-                                                                               group_by(CU, Region) %>%
-                                                                               summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)),
-                                                                             filter(n_data == max(n_data)),
-                                                                             by = c("CU" = "CU_name")) %>% 
-  group_by(Region) %>% 
-  summarize(mean_productivity_decline = mean(productivity_50)) %>% 
-  arrange(-mean_productivity_decline) %>% 
-  pull(Region)
-
-
-#relevel regions by hand
-
-Region_relevel_custom <- c("South Coast","South Island", "Campbell River", 
-                           "North Island - Central Coast", "Haida Gwaii",
-                           "North Coast - Skeena")
 
 #relevel regions by hand
 
@@ -392,12 +351,9 @@ Region_relevel_custom2 <- c("South Island","Campbell River",  "South Coast",
                             "North Island - Central Coast",
                             "North Coast - Skeena", "Haida Gwaii")
 
-
-
-
 # make a pie chart of the number of data points
 
-foo2 <- ric_chm_cpd_productivity_decline_cu_new_2022 %>% left_join(ch20rsc_w_outlet_lfid %>% 
+foo2 <- ric_chm_cpd_productivity_decline_cu_full_2022 %>% left_join(ch20rsc_w_outlet_lfid %>% 
                                                                      select(CU, Region, CU_name, Y_LAT) %>% 
                                                                      group_by(CU, Region) %>%
                                                                      summarize(n_data =n(), CU_name= first(CU_name), Y_LAT = max(Y_LAT)) %>%  
@@ -438,7 +394,6 @@ foo2 <- ric_chm_cpd_productivity_decline_cu_new_2022 %>% left_join(ch20rsc_w_out
   mutate(CU2_numeric = as.numeric(CU2)*10, pie_chart_position = productivity_025-7) 
 
 
-
 cu_forest_plot_new7 <- foo2 %>%  
   ggplot(aes(y = CU2_numeric, x = productivity_50)) +
   geom_point(aes(x = productivity_50, y = CU2_numeric, color = majority_region), 
@@ -471,7 +426,7 @@ cu_forest_plot_new7 <- foo2 %>%
   scale_color_manual(name = 'Region', values = colrs_w_alpha) +
   scale_fill_manual(name = 'Region', values = colrs_w_alpha) +
   geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
-  xlim(-100, 100) +
+  xlim(-100, 110) +
   scale_y_continuous(
     breaks = foo2$CU2_numeric,
     labels = foo2$CU2
@@ -505,6 +460,7 @@ cu_forest_plot_new7 <- foo2 %>%
 
 cu_forest_plot_new7
 
+
 ggsave(here("output_figures_tables","manuscript_fig5_sep2026_chum_ricker_cda_recruitment_decline_2022_by_cu_forest_plot_arranged_latitude_pie_chart.png"),
        cu_forest_plot_new7, width = 6, height = 6, bg = "white")
 
@@ -512,27 +468,9 @@ ggsave(here("output_figures_tables","manuscript_fig5_review1.pdf"),
        cu_forest_plot_new7, width = 6, height = 6, bg = "white",dpi = 300)
 
 
-# calculate the latest (2022) disturbance levels for all salmon rivers 
-# within each CU even when it is not in the model
 
 
-# can keep the same function but use a different dataset?
-
-
-full_ch20rsc <- lookup %>% 
-  select(CU, GFE_ID, Species, LINEAR_FEATURE_ID, haarea_prct_cs) %>%
-  left_join(ch20rsc, by = c("CU" = "CU", "GFE_ID" = "GFE_ID", "Species" = "Species")) %>% 
-  left_join(pop_sheds %>% select(outlet_lfid, Region) %>% mutate(outlet_lfid = as.integer(outlet_lfid)), 
-            by = c("LINEAR_FEATURE_ID" = "outlet_lfid"))
-
-# make a dataframe outside the function with the 
-# CU-level average 2022 forestry disturbance
-
-full_CU_CDA_2022 <- full_ch20rsc %>% 
-  group_by(CU, GFE_ID, Species) %>%
-  summarize(haarea_prct_cs_2022 = max(haarea_prct_cs))
-  
-
+                                                                                    
 
 
 
