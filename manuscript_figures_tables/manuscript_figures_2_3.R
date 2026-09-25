@@ -11,7 +11,7 @@
 
  
 # Required packages ----
-list.of.packages <- c("tidyverse", "extrafont", "lubridate", "ggplot2", "sf", "qs", "openxlsx", "stringi","rnaturalearth", "scales", "ggpubr", "giscoR", "rmapshaper", "patchwork", "here") 
+list.of.packages <- c("tidyverse", "extrafont", "lubridate", "ggplot2", "sf", "qs2", "openxlsx", "stringi","rnaturalearth", "scales", "ggpubr", "giscoR", "rmapshaper", "patchwork", "here") 
  
 # What packages need to be installed?
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[, "Package"])] 
