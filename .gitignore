@@ -50,3 +50,6 @@ rsconnect/
 
 #Large files
 salmon_forestry_data_analyis/stan models/outs/fits/
+
+#Poster
+salmon_forestry_data_analyis/poster/
