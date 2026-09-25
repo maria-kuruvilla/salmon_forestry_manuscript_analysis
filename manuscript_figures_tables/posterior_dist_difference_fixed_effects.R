@@ -18,7 +18,7 @@ library(ggrepel)
 
 
 
-ch20rsc <- read.csv(here('salmon_forestry_data_analysis','data','chum_SR_20_hat_yr_w_ersst.csv'))
+ch20rsc <- read.csv(here('salmon_forestry_data_analysis','data','chum_SR_20_hat_yr_w_ersst_npgo.csv'))
 
 
 #two rivers with duplicated names:
@@ -38,7 +38,7 @@ ch20rsc$sqrt.ECA.std=(ch20rsc$sqrt.ECA-mean(ch20rsc$sqrt.ECA))/sd(ch20rsc$sqrt.E
 ch20rsc$sqrt.CPD=sqrt(ch20rsc$disturbedarea_prct_cs)
 ch20rsc$sqrt.CPD.std=(ch20rsc$sqrt.CPD-mean(ch20rsc$sqrt.CPD))/sd(ch20rsc$sqrt.CPD)
 
-ch20rsc$npgo.std=(ch20rsc$npgo-mean(ch20rsc$npgo))/sd(ch20rsc$npgo)
+ch20rsc$winter_npgo.std=(ch20rsc$winter_npgo-mean(ch20rsc$winter_npgo))/sd(ch20rsc$winter_npgo)
 ch20rsc$sst.std=(ch20rsc$spring_ersst-mean(ch20rsc$spring_ersst))/sd(ch20rsc$spring_ersst)
 
 cu = distinct(ch20rsc,.keep_all = T)
@@ -54,10 +54,10 @@ ch20rsc$CU_name <- str_to_title(ch20rsc$CU_NAME)
 ch20rsc$CU_name <- ifelse(ch20rsc$CU_name == "East Hg", "East Haida Gwaii", ch20rsc$CU_name)
 
 
-pk10r_e <- read.csv(here('salmon_forestry_data_analysis','data',"pke_SR_10_hat_yr_w_ersst.csv"))
+pk10r_e <- read.csv(here('salmon_forestry_data_analysis','data',"pke_SR_10_hat_yr_w_ersst_npgo.csv"))
 
 #odd year pinks
-pk10r_o <- read.csv(here('salmon_forestry_data_analysis','data',"pko_SR_10_hat_yr_w_ersst.csv"))
+pk10r_o <- read.csv(here('salmon_forestry_data_analysis','data',"pko_SR_10_hat_yr_w_ersst_npgo.csv"))
 
 options(mc.cores=8)
 
@@ -94,9 +94,9 @@ pk10r_e$sqrt.CPD=sqrt(pk10r_e$disturbedarea_prct_cs)
 pk10r_e$sqrt.CPD.std=(pk10r_e$sqrt.CPD-mean(pk10r_e$sqrt.CPD))/sd(pk10r_e$sqrt.CPD)
 
 
-#standardize npgo
-pk10r_o$npgo.std=(pk10r_o$npgo-mean(pk10r_o$npgo))/sd(pk10r_o$npgo)
-pk10r_e$npgo.std=(pk10r_e$npgo-mean(pk10r_e$npgo))/sd(pk10r_e$npgo)
+#standardize winter_npgo
+pk10r_o$winter_npgo.std=(pk10r_o$winter_npgo-mean(pk10r_o$winter_npgo))/sd(pk10r_o$winter_npgo)
+pk10r_e$winter_npgo.std=(pk10r_e$winter_npgo-mean(pk10r_e$winter_npgo))/sd(pk10r_e$winter_npgo)
 
 # pk10r_o$sst.std = (pk10r_o$spring_lighthouse_temperature-mean(pk10r_o$spring_lighthouse_temperature))/sd(pk10r_o$spring_lighthouse_temperature)
 # pk10r_e$sst.std = (pk10r_e$spring_lighthouse_temperature-mean(pk10r_e$spring_lighthouse_temperature))/sd(pk10r_e$spring_lighthouse_temperature)
@@ -111,8 +111,8 @@ pk10r_e$escapement.t_1=pk10r_o$Spawners[match(paste(pk10r_e$WATERSHED_CDE,pk10r_
 pk10r_o$Broodline='Odd'
 pk10r_e$Broodline='Even'
 
-L_o=pk10r_o%>%group_by(River)%>%summarize(l=n(),by=min(BroodYear),tmin=(min(BroodYear)-min(pk10r_o$croodYear))/2+1,tmax=(max(BroodYear)-min(pk10r_o$BroodYear))/2)
-L_e=pk10r_e%>%group_by(River)%>%summarize(l=n(),by=min(BroodYear),tmin=(min(BroodYear)-min(pk10r_e$croodYear))/2+1,tmax=(max(BroodYear)-min(pk10r_e$BroodYear))/2)
+L_o=pk10r_o%>%group_by(River)%>%summarize(l=n(),by=min(BroodYear),tmin=(min(BroodYear)-min(pk10r_o$BroodYear))/2+1,tmax=(max(BroodYear)-min(pk10r_o$BroodYear))/2)
+L_e=pk10r_e%>%group_by(River)%>%summarize(l=n(),by=min(BroodYear),tmin=(min(BroodYear)-min(pk10r_e$BroodYear))/2+1,tmax=(max(BroodYear)-min(pk10r_e$BroodYear))/2)
 L_o$River2=paste(L_o$River,'Odd',sep='_')
 L_e$River2=paste(L_e$River,'Even',sep='_')
 L_all=rbind(L_e,L_o)
@@ -225,7 +225,8 @@ diff_forestry_sst_npgo_cu_summary <- diff_forestry_sst_npgo_cu %>%
             median_diff_for_npgo = median(diff_for_npgo),
             ci_lower_diff_for_npgo = quantile(diff_for_npgo, 0.025),
             ci_upper_diff_for_npgo = quantile(diff_for_npgo, 0.975)) %>% 
-  left_join(cu %>% select(CU_n, CU_name), by = "CU_n")
+  mutate(CU_n = as.numeric(CU_n)) %>%
+  left_join(ch20rsc %>% select(CU_n, CU_name) %>% distinct(), by = "CU_n")
 
 
 
@@ -312,7 +313,7 @@ npgo_diff
 both_plots_cpd <- sst_diff + npgo_diff + plot_layout(axes = 'collect')+
   plot_annotation(tag_levels = 'A') & theme(plot.tag = element_text(size = 12))
 
-ggsave(here('output_figures_tables','difference_effect_sizes_sst.png'), plot = both_plots_cpd, width = 6, height = 3, dpi = 300)
+ggsave(here('output_figures_tables','difference_effect_sizes_sst_sep2026.png'), plot = both_plots_cpd, width = 6, height = 3, dpi = 300)
 
 # do the same with ECA
 
@@ -424,7 +425,7 @@ both_plots_eca_cda
 
 
 #save
-ggsave(here('output_figures_tables','difference_effect_sizes_eca_cda.png'), plot = both_plots_eca_cda, width = 8, height = 6, dpi = 300)
+ggsave(here('output_figures_tables','difference_effect_sizes_eca_cda_sep2026.png'), plot = both_plots_eca_cda, width = 8, height = 6, dpi = 300)
 
 
 
@@ -578,7 +579,7 @@ effect_sizes_difference_cu_df(ric_chm_cpd_ocean_covariates_logR_long_chain, spec
       select(CU, diff_eca_sst, diff_eca_npgo),
     by = "CU"
   ) %>% 
-  write.csv(here('output_figures_tables','difference_effect_sizes_for_cu_chum.csv'), row.names = FALSE)
+  write.csv(here('output_figures_tables','difference_effect_sizes_for_cu_chum_sep2026.csv'), row.names = FALSE)
 
 
 #do same for river level effects

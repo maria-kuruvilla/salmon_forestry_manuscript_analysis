@@ -165,7 +165,7 @@ ggplot(post_prior_long, aes(x = value, fill = type, color = type)) +
         axis.text.y = element_text(size = 8))
 
 #save
-ggsave(here('output_figures_tables','prior_posterior_dist.png'), width = 6, height = 6, dpi = 300)
+ggsave(here('output_figures_tables','prior_posterior_dist_sep2026.png'), width = 6, height = 6, dpi = 300)
 
 
 
