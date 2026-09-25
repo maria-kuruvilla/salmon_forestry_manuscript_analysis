@@ -371,8 +371,10 @@ plot_forestry_effect_manuscript <- function(posterior = bh_chm_eca,
 }
 
 
-plot_productivity_decline_manuscript <- function(posterior = bh_chm_eca_sst, 
+plot_productivity_decline_manuscript_new <- function(posterior = bh_chm_eca_sst, 
                                                  effect = "eca", species = "chum", 
+                                                 average_cda_2022 = average_cda_2022,
+                                                 max_eca_2022 = max_eca_2022,
                                                  model = "BH model with NPGO, LH SST", 
                                                  by_river = FALSE, hd = FALSE){
   
@@ -388,71 +390,83 @@ plot_productivity_decline_manuscript <- function(posterior = bh_chm_eca_sst,
   
   if(effect == "eca"){
     forestry <- seq(0,1,length.out=100)
+    
     b <- posterior %>% select(ends_with("b_for"))
     
-    forestry_sqrt <- sqrt(forestry)
+    # forestry_sqrt <- sqrt(forestry)
     
-    forestry_sqrt_std = (forestry_sqrt-mean(forestry_sqrt))/sd(forestry_sqrt)
+    # forestry_sqrt_std = (forestry_sqrt-mean(forestry_sqrt))/sd(forestry_sqrt)
+    
+    forestry_diff <- sqrt(forestry)/sd(df$sqrt.ECA)
     
   }else if(effect == "cpd"){
-    forestry <- seq(0,100,length.out=100)
-    b <- posterior %>% select(ends_with("b_for"))
-    forestry_sqrt <- sqrt(forestry)
     
-    forestry_sqrt_std = (forestry_sqrt-mean(forestry_sqrt))/sd(forestry_sqrt)
+    forestry <- seq(0,100,length.out=100)
+    
+    b <- posterior %>% select(ends_with("b_for"))
+    
+    # forestry_sqrt <- sqrt(forestry)
+    
+    # forestry_sqrt_std = (forestry_sqrt-mean(forestry_sqrt))/sd(forestry_sqrt)
+    
+    forestry_diff <- sqrt(forestry)/sd(df$sqrt.CPD)
     
   }else if(effect == "sst"){
     forestry <- seq(10,15,length.out=100)
     b <- posterior %>% select(ends_with("b_sst"))
     
-    forestry_sqrt_std = (forestry-mean(forestry))/sd(forestry)
+    # forestry_sqrt_std = (forestry-mean(forestry))/sd(forestry)
+    
+    forestry_diff <- forestry/sd(df$spring_ersst)
     
   }else if(effect == "npgo"){
     forestry <- seq(-3,3,length.out=100)
     b <- posterior %>% select(ends_with("b_npgo"))
     
-    forestry_sqrt_std = (forestry-mean(forestry))/sd(forestry)
+    # forestry_sqrt_std = (forestry-mean(forestry))/sd(forestry)
+    
+    forestry_diff <- forestry/sd(df$winter_npgo)
     
   }
   
   
   
-  no_forestry <- min(forestry_sqrt_std)
+  # no_forestry <- min(forestry_sqrt_std)
   
   # ch_chm_eca_sst=read.csv(here('stan models','outs','posterior',ch_chm_eca_sst),check.names=F)
   
   
   
   global_prediction <- apply(exp(as.matrix(b[,1])%*%
-                                   (forestry_sqrt_std-no_forestry))*100 - 100,2,median)
+                                   (forestry_diff))*100 - 100,2,median)
   
   global_025 <- apply(exp(as.matrix(b[,1])%*%
-                            (forestry_sqrt_std-no_forestry))*100 - 100,2,quantile,c(0.025), 
+                            (forestry_diff))*100 - 100,2,quantile,c(0.025), 
                       row.names = c("q025"))
   
   global_975 <- apply(exp(as.matrix(b[,1])%*%
-                            (forestry_sqrt_std-no_forestry))*100 - 100,2,quantile,c(0.975),
+                            (forestry_diff))*100 - 100,2,quantile,c(0.975),
                       row.names = c("q975"))
   global_750 <- apply(exp(as.matrix(b[,1])%*%
-                            (forestry_sqrt_std-no_forestry))*100 - 100,2,quantile,c(0.75),
+                            (forestry_diff))*100 - 100,2,quantile,c(0.75),
                       row.names = c("q750"))
   
   global_250 <- apply(exp(as.matrix(b[,1])%*%
-                            (forestry_sqrt_std-no_forestry))*100 - 100,2,quantile,c(0.25),
+                            (forestry_diff))*100 - 100,2,quantile,c(0.25),
                       row.names = c("q250"))
   
   global_900 <- apply(exp(as.matrix(b[,1])%*%
-                            (forestry_sqrt_std-no_forestry))*100 - 100,2,quantile,c(0.9),
+                            (forestry_diff))*100 - 100,2,quantile,c(0.9),
                       row.names = c("q900"))
   
   global_100 <- apply(exp(as.matrix(b[,1])%*%
-                            (forestry_sqrt_std-no_forestry))*100 - 100,2,quantile,c(0.1),
+                            (forestry_diff))*100 - 100,2,quantile,c(0.1),
                       row.names = c("q100"))
   
   # calculate high density credible intervals
   
   hd_df <- apply(exp(as.matrix(b[,1])%*%
-                       (forestry_sqrt_std-no_forestry))*100 - 100,2,hdi, 
+                       (forestry_diff))*100 - 100,2,hdi, 
                  ci = c(0.5,0.8,0.95))
   
   # extract hd intervals from hd_df
@@ -496,7 +510,8 @@ plot_productivity_decline_manuscript <- function(posterior = bh_chm_eca_sst,
                           q750 = global_750,
                           q250 = global_250,
                           q900 = global_900,
-                          q100 = global_100) %>% 
+                          q100 = global_100
+                          ) %>% 
     cbind(hd_intervals)
   
   full_productivity <- NULL
@@ -519,130 +534,7 @@ plot_productivity_decline_manuscript <- function(posterior = bh_chm_eca_sst,
     
   }
   
-  if(by_river){
-    
-    # no_forestry <- min(eca_std_sqrt)
-    for (i in 1:length(unique(df$River_n))){
-      river <- unique(df$River_n)[i]
-      
-      river_data <- df %>% filter(River_n == river)
-      
-      if(effect == "eca"){
-        b_rv <- posterior %>% select(starts_with("b_for_rv")) %>%
-          select(ends_with(paste0("[",river,"]")))
-        
-        forestry_sqrt_std_river <- seq(min(forestry_sqrt_std),max(river_data$sqrt.ECA.std),length.out=100)
-        #minimum forestry possible -0
-        forestry_river <- seq(0,max(river_data$ECA_age_proxy_forested_only),length.out=100)
-        
-        
-      } else if(effect == "cpd"){
-        b_rv <- posterior %>% select(starts_with("b_for_rv")) %>%
-          select(ends_with(paste0("[",river,"]")))
-        
-        forestry_sqrt_std_river <- seq(min(forestry_sqrt_std),max(river_data$sqrt.CPD.std),length.out=100)
-        #minimum forestry possible - 0
-        forestry_river <- seq(0,max(river_data$disturbedarea_prct_cs),length.out=100)
-        
-        
-      } else if(effect == "sst"){
-        b_rv <- posterior %>% select(starts_with("b_sst_rv")) %>%
-          select(ends_with(paste0("[",river,"]")))
-        
-        # use only spring_ersst
-        
-        forestry_sqrt_std_river <- seq(min(river_data$sst.std),max(river_data$sst.std),length.out=100)
-        
-        forestry_river <- seq(min(river_data$spring_ersst),max(river_data$spring_ersst),length.out=100)
-        
-      }
-      
-      
-      
-      
-      
-      
-      
-      productivity <- (exp(as.matrix(b_rv[,1])%*%
-                             (forestry_sqrt_std-no_forestry)))*100 - 100
-      
-      productivity_median <- apply(productivity,2,median)
-      
-      productivity_median_df <- data.frame(River = unique(river_data$River),
-                                           productivity_median = productivity_median,
-                                           forestry = forestry_river) %>% 
-        filter(forestry >= min(forestry_river), forestry <= max(forestry_river))
-      
-      full_productivity <- rbind(full_productivity, productivity_median_df)
-      
-    }
-    
-    # c <- posterior %>% select(ends_with("b_for"))
-    
-    median_prediction <- apply(exp(as.matrix(b[,1])%*%
-                                     (forestry_sqrt_std-no_forestry))*100 - 100,2,median)
-    
-    median_df <- data.frame(forestry = forestry,
-                            productivity_median = median_prediction)
-    
-    if(effect == "eca" || effect == "cpd"){
-      p1 <- ggplot(full_productivity) +
-        geom_line(aes(x = forestry, y = productivity_median, group = River,
-                      color = "watershed level\nforestry effect"),alpha=0.5) +
-        geom_line(data = global_df, 
-                  aes(x = forestry, y = productivity_median, color = "global forestry effect"), linewidth = 1) +
-        geom_ribbon(data = global_df, aes(x = forestry, ymin = q025, ymax = q975),
-                    alpha = 0.5, fill = "#ADcCA5") +
-        # scale_fill_manual("",values  = c("95% credicle interval" = "gray")) +
-        scale_color_manual("",values = c("watershed level\nforestry effect" = "darkgray", 
-                                         "global forestry effect" = "black")) +
-        ylim(-100,100) +
-        scale_x_continuous(n.breaks = 5) +
-        labs(title = model,
-             x = ifelse(effect == "eca", "Equivalent clearcut area", "Cumulative disturbance (%)"),
-             y = "Median change\n in recruitment (%)") +
-        theme_classic() +
-        theme(legend.position = c(0.8,0.8),
-              legend.title = element_blank(),
-              legend.key.size = unit(0.5, "cm"),
-              legend.key.width = unit(1, "cm"),
-              axis.title.x = element_text(size = 8),
-              axis.title.y = element_text(size = 8),
-              axis.text.x = element_text(size = 8),
-              axis.text.y = element_text(size = 8),
-              plot.title = element_text(size = 10, hjust = 0.5))+
-        guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 1.5)))
-    } else if(effect == "sst"){
-      p1 <- ggplot(full_productivity) +
-        geom_line(aes(x = forestry, y = productivity_median, group = River,
-                      color = "watershed level\nSST effect"),alpha=0.5) +
-        geom_line(data = global_df, 
-                  aes(x = forestry, y = productivity_median, color = "global SST effect"), linewidth = 1) +
-        geom_ribbon(data = global_df, aes(x = forestry, ymin = q025, ymax = q975),
-                    alpha = 0.5, fill = "gray") +
-        # scale_fill_manual("",values  = c("95% credicle interval" = "gray")) +
-        scale_color_manual("",values = c("watershed level\nSST effect" = "darkgray", 
-                                         "global SST effect" = "black")) +
-        ylim(-100,100) +
-        scale_x_continuous(n.breaks = 5, limits = c(10,15)) +
-        labs(title = model,
-             x = "Spring SST (°C)",
-             y = "Median change\n in recruitment (%)") +
-        theme_classic() +
-        theme(legend.position = c(0.8,0.8),
-              legend.title = element_blank(),
-              legend.key.size = unit(0.5, "cm"),
-              legend.key.width = unit(1, "cm"),
-              axis.title.x = element_text(size = 8),
-              axis.title.y = element_text(size = 8),
-              axis.text.x = element_text(size = 8),
-              axis.text.y = element_text(size = 8),
-              plot.title = element_text(size = 10, hjust = 0.5))+
-        guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 1.5)))
-    }
-  } else {
-    
-    if(effect == "eca" || effect == "cpd"){
+   if(effect == "cpd"){
       p1 <- ggplot(full_productivity) +
         # geom_line(aes(x = forestry, y = productivity_median, group = River,
         #               color = "watershed level\nforestry effect"),alpha=0.5) +
@@ -660,7 +552,26 @@ plot_productivity_decline_manuscript <- function(posterior = bh_chm_eca_sst,
                                           fill = "50% credible\ninterval"))+
         geom_line(data = global_df, 
                   aes(x = forestry, y = productivity_median, color = "Median coastwide\nchange"), linewidth = 1) +
-        # scale_fill_manual("",values  = c("95% credicle interval" = "gray")) +
+        geom_segment(aes(x = unique(average_cda_2022$average_cda_2022),
+                         xend = unique(average_cda_2022$average_cda_2022),
+                         y = -75,
+                         yend = global_df$productivity_median[which.min(abs(forestry - average_cda_2022$average_cda_2022))],
+                         color = "gray"),
+                     linetype = "dashed", linewidth = 0.8) +
+        # add horizontal line
+        geom_segment(aes(x = 0,
+                         xend = average_cda_2022$average_cda_2022,
+                         y = global_df$productivity_median[which.min(abs(forestry - average_cda_2022$average_cda_2022))],
+                         yend = global_df$productivity_median[which.min(abs(forestry - average_cda_2022$average_cda_2022))],
+                         color = "gray"),
+                     linetype = "dashed", linewidth = 0.8) +
+        annotate("text",x = average_cda_2022$average_cda_2022,
+                 y = global_df$productivity_median[which.min(abs(forestry - average_cda_2022$average_cda_2022))],
+                 label = paste0("2022 CDA: ",round(average_cda_2022$average_cda_2022,1),"%\n",
+                                "Median change: ",round(global_df$productivity_median[which.min(abs(forestry - average_cda_2022$average_cda_2022))],1),"%"),
+                 vjust = -0.5, color = "black", size = 3, hjust = 0
+        )+
+        
         scale_color_manual("",values = c("Median coastwide\nchange" = "black")) +
         scale_fill_manual("",values  = c("95% credible\ninterval" = "#A0A99A",
                                          "80% credible\ninterval" =  "#8DAB86",
@@ -689,75 +600,74 @@ plot_productivity_decline_manuscript <- function(posterior = bh_chm_eca_sst,
         guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 1.5)),
                
         )
-    } else if(effect == "sst"){
+    } else if(effect == "eca"){
+      
       p1 <- ggplot(full_productivity) +
         # geom_line(aes(x = forestry, y = productivity_median, group = River,
-        #               color = "watershed level\nSST effect"),alpha=0.5) +
-        geom_line(data = global_df, 
-                  aes(x = forestry, y = productivity_median, color = "global SST effect"), linewidth = 1) +
-        geom_ribbon(data = global_df, aes(x = forestry, ymin = !!sym(ymin_95), ymax = !!sym(ymax_95)),
-                    alpha = 0.25, fill = "#C78c63") +
-        geom_ribbon(data = global_df, aes(x = forestry, ymin = !!sym(ymin_50), ymax = !!sym(ymax_50)),
-                    alpha = 0.65, fill = "#C78c63") +
-        geom_ribbon(data = global_df, aes(x = forestry, ymin = !!sym(ymin_80), ymax = !!sym(ymax_80)),
-                    alpha = 0.45, fill = "#C78c63") +
-        # scale_fill_manual("",values  = c("95% credicle interval" = "gray")) +
-        scale_color_manual("",values = c("global SST effect" = "#C78c63")) +
+        #               color = "watershed level\nforestry effect"),alpha=0.5) +
         
-        ylim(-50,100) +
-        scale_x_continuous(n.breaks = 5, limits = c(10,15)) +
+        geom_ribbon(data = global_df, aes(x = forestry, ymin = !!sym(ymin_95), ymax = !!sym(ymax_95),
+                                          alpha = "95% credible\ninterval",
+                                          fill = "95% credible\ninterval"))+
+        
+        geom_ribbon(data = global_df, aes(x = forestry, ymin = !!sym(ymin_80), ymax = !!sym(ymax_80),
+                                          alpha = "80% credible\ninterval",
+                                          fill = "80% credible\ninterval"))+
+        
+        geom_ribbon(data = global_df, aes(x = forestry, ymin = !!sym(ymin_50), ymax = !!sym(ymax_50),
+                                          alpha = "50% credible\ninterval",
+                                          fill = "50% credible\ninterval"))+
+        geom_line(data = global_df, 
+                  aes(x = forestry, y = productivity_median, color = "Median coastwide\nchange"), linewidth = 1) +
+        geom_segment(aes(x = unique(max_eca_2022$max_average_eca_2022),
+                         xend = unique(max_eca_2022$max_average_eca_2022),
+                         y = -75,
+                         yend = global_df$productivity_median[which.min(abs(forestry - max_eca_2022$max_average_eca_2022))],
+                         color = "gray"),
+                     linetype = "dashed", linewidth = 0.8) +
+        # add horizontal line
+        geom_segment(aes(x = 0,
+                         xend = max_eca_2022$max_average_eca_2022,
+                         y = global_df$productivity_median[which.min(abs(forestry - max_eca_2022$max_average_eca_2022))],
+                         yend = global_df$productivity_median[which.min(abs(forestry - max_eca_2022$max_average_eca_2022))],
+                         color = "gray"),
+                     linetype = "dashed", linewidth = 0.8) +
+        annotate("text",x = max_eca_2022$max_average_eca_2022,
+                 y = global_df$productivity_median[which.min(abs(forestry - max_eca_2022$max_average_eca_2022))],
+                 label = paste0("Maximum ECA: ",round(max_eca_2022$max_average_eca_2022*100,1),"%\n",
+                                "Median change: ",round(global_df$productivity_median[which.min(abs(forestry - max_eca_2022$max_average_eca_2022))],1),"%"),
+                 vjust = -0.5, color = "black", size = 3, hjust = 0
+        )+
+        
+        scale_color_manual("",values = c("Median coastwide\nchange" = "black")) +
+        scale_fill_manual("",values  = c("95% credible\ninterval" = "#A0A99A",
+                                         "80% credible\ninterval" =  "#8DAB86",
+                                         "50% credible\ninterval" = "#3E7D62"
+        )) +
+        scale_alpha_manual("",values  = c("95% credible\ninterval" = 0.35,
+                                          "80% credible\ninterval" = 0.65,
+                                          "50% credible\ninterval" = 0.85
+                                          
+        )) +
+        ylim(-100,50) +
+        scale_x_continuous(n.breaks = 5) +
         labs(title = model,
-             x = "Spring SST (°C)",
+             x = ifelse(effect == "eca", "Equivalent clearcut area", "Cumulative disturbance (%)"),
              y = "Median change\n in recruitment (%)") +
         theme_classic() +
         theme(legend.position = "none",
               legend.title = element_blank(),
-              legend.key.size = unit(0.5, "cm"),
+              legend.key.size = unit(0.2, "cm"),
               legend.key.width = unit(1, "cm"),
               axis.title.x = element_text(size = 8),
               axis.title.y = element_text(size = 8),
               axis.text.x = element_text(size = 8),
               axis.text.y = element_text(size = 8),
               plot.title = element_text(size = 10, hjust = 0.5))+
-        guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 1.5)))
-    }else if(effect == "npgo"){
-      p1 <- ggplot(full_productivity) +
-        # geom_line(aes(x = forestry, y = productivity_median, group = River,
-        #               color = "watershed level\nSST effect"),alpha=0.5) +
-        geom_line(data = global_df, 
-                  aes(x = forestry, y = productivity_median, color = "global NPGO effect"), linewidth = 1) +
-        geom_ribbon(data = global_df, aes(x = forestry, ymin =!!sym(ymin_95), ymax = !!sym(ymax_95)),
-                    alpha = 0.25, fill = "#829Dc6") +
-        geom_ribbon(data = global_df, aes(x = forestry, ymin = !!sym(ymin_50), ymax = !!sym(ymax_50)),
-                    alpha = 0.65, fill = "#829Dc6") +
-        geom_ribbon(data = global_df, aes(x = forestry, ymin = !!sym(ymin_80), ymax = !!sym(ymax_80)),
-                    alpha = 0.45, fill = "#829Dc6") +
-        # scale_fill_manual("",values  = c("95% credicle interval" = "gray")) +
-        scale_color_manual("",values = c("global NPGO effect" = "#829Dc6")) +
-        
-        ylim(-50,100) +
-        scale_x_continuous(n.breaks = 5, limits = c(-3,3)) +
-        labs(title = model,
-             x = "NPGO",
-             y = "Median change\n in recruitment (%)") +
-        theme_classic() +
-        theme(legend.position = "none",
-              legend.title = element_blank(),
-              legend.key.size = unit(0.5, "cm"),
-              legend.key.width = unit(1, "cm"),
-              axis.title.x = element_text(size = 8),
-              axis.title.y = element_text(size = 8),
-              axis.text.x = element_text(size = 8),
-              axis.text.y = element_text(size = 8),
-              plot.title = element_text(size = 10, hjust = 0.5))+
-        guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 1.5)))
-    }
-    
-    
-    
-    
+        guides(color = guide_legend(override.aes = list(alpha = 1, linewidth = 1.5)),
+               
+        )
   }
-  
   
   
   return(p1)
@@ -1051,7 +961,7 @@ plot_chum_D <- plot_npgo_effect_manuscript(posterior = ric_chm_cpd_ocean_covaria
         axis.title.y = element_text(size = 10))
 
 
-plot_chum_E <- plot_productivity_decline_manuscript(posterior = ric_chm_cpd_ocean_covariates_logR, 
+plot_chum_E <- plot_productivity_decline_manuscript_new(posterior = ric_chm_cpd_ocean_covariates_logR,
                                                     effect = "cpd", model = "", hd = FALSE)+
   ylim(c(-75,75))+
   scale_x_continuous(labels = scales::percent_format(accuracy = 1, scale = 1))+
@@ -1073,7 +983,7 @@ plot_chum_E <- plot_productivity_decline_manuscript(posterior = ric_chm_cpd_ocea
         axis.title.y = element_text(size = 10))
 # guides(fill=guide_legend(nrow=1, byrow=TRUE))
 
-plot_chum_F <- plot_productivity_decline_manuscript(posterior = ric_chm_eca_ocean_covariates_logR,
+plot_chum_F <- plot_productivity_decline_manuscript_new(posterior = ric_chm_eca_ocean_covariates_logR,
                                                     effect = "eca", model = "", hd = FALSE)+
   ylim(c(-75,75))+
   #change x axis to go from 1 to 100 instead of 0 to 1
@@ -1152,7 +1062,7 @@ plot_pink_J <- plot_npgo_effect_manuscript(posterior = ric_pk_cpd_ersst,
         axis.title.y = element_text(size = 10))
 
 
-plot_pink_K <- plot_productivity_decline_manuscript(posterior = ric_pk_cpd_ersst,  
+plot_pink_K <- plot_productivity_decline_manuscript_new(posterior = ric_pk_cpd_ersst,  
                                                     species = "pink",
                                                     effect = "cpd", 
                                                     # model = "Ricker model with CPD")
@@ -1164,7 +1074,7 @@ plot_pink_K <- plot_productivity_decline_manuscript(posterior = ric_pk_cpd_ersst
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 
-plot_pink_L <- plot_productivity_decline_manuscript(posterior = ric_pk_eca_ersst,
+plot_pink_L <- plot_productivity_decline_manuscript_new(posterior = ric_pk_eca_ersst,
                                                     species = "pink",
                                                     effect = "eca", 
                                                     # model = "Ricker model with ECA")
@@ -1218,5 +1128,275 @@ ggsave(here('output_figures_tables','manuscript_fig4_sep2026_chum_pink_ricker.pn
        dpi = 300)
 
 
+# add dashed lines for the average CDA across all rivers for 2022, and 2012
+# add dashed lines for the average max ECA across all rivers
+
+# chum
+
+df <- ch20rsc
+
+average_cda_2012 <- df %>% 
+  group_by(River_n) %>% 
+  summarize(max_cda = max(disturbedarea_prct_cs)) %>% 
+  summarize(average_cda_2012 = mean(max_cda))
+
+max_average_eca_2012 <- df %>% 
+  group_by(River_n) %>% 
+  summarize(max_eca = max(ECA_age_proxy_forested_only)) %>% 
+  summarize(max_average_eca = mean(max_eca))
+# pink
+
+df_pink <- pk10r
+
+average_cda_2012_pink <- df_pink %>% 
+  group_by(River_n) %>% 
+  summarize(max_cda = max(disturbedarea_prct_cs)) %>% 
+  summarize(average_cda_2012 = mean(max_cda))
+
+max_average_eca_pink_2012 <- df_pink %>%
+  group_by(River_n) %>% 
+  summarize(max_eca = max(ECA_age_proxy_forested_only)) %>% 
+  summarize(max_average_eca = mean(max_eca))
 
 
+recruitment_decline_df <- function(posterior, effect, species, covariate_value){
+  
+  if(species == "chum"){
+    df <- ch20rsc 
+    
+  } else if(species == "pink"){
+    df <- pk10r
+  }
+  
+  recruitment_df <- NULL
+  
+  b <- posterior %>% select(ends_with("b_for"))
+  
+  if(effect == "eca"){
+    # covariate_std = (sqrt(covariate_value)-mean(df$sqrt.ECA))/sd(df$sqrt.ECA)
+    # 
+    # forestry_eca <- seq(0,1, length.out = 100)
+    # 
+    # forestry_sqrt <- sqrt(forestry_eca)
+    # 
+    # forestry_sqrt_std = (forestry_sqrt-mean(forestry_sqrt))/sd(forestry_sqrt)
+    # 
+    # no_forestry <- min(forestry_sqrt_std)
+    # no_forestry = (min((sqrt(df$disturbedarea_prct_cs)-mean(sqrt(df$disturbedarea_prct_cs)))/sd(sqrt(df$disturbedarea_prct_cs))))
+    # 
+    forestry_diff <- sqrt(covariate_value)/sd(df$sqrt.ECA)
+    
+    recruitment = (exp(as.matrix(b[,1])%*%
+                         (forestry_diff)))*100 - 100
+    
+    
+  } else if(effect == "cpd"){
+    # covariate_std = (sqrt(covariate_value)-mean(df$sqrt.CPD))/sd(df$sqrt.CPD)
+    # 
+    # forestry_cpd <- seq(0,100, length.out = 100)
+    # 
+    # #to calculate no forestry in the standardized scale
+    # forestry_sqrt <- sqrt(forestry_cpd)
+    # 
+    # forestry_sqrt_std = (forestry_sqrt-mean(forestry_sqrt))/sd(forestry_sqrt)
+    # 
+    # no_forestry <- min(forestry_sqrt_std)
+    
+    forestry_diff <- sqrt(covariate_value)/sd(df$sqrt.CPD)
+    
+    recruitment = (exp(as.matrix(b[,1])%*%
+                                 (forestry_diff)))*100 - 100
+  }
+  
+  
+  recruitment_df = data.frame(species = species,
+                              effect = effect,
+                              covariate_value = covariate_value,
+                              recruitment_median = round(median(recruitment),2),
+                              recruitment_025 = quantile(recruitment, 0.025),
+                              recruitment_975 = quantile(recruitment, 0.975)
+  )
+  
+  return(recruitment_df)
+}
+
+
+
+#calculate recruitment decline for current_average_cpd and max_average_eca
+
+chum_recruitment_decline_cda <- recruitment_decline_df(ric_chm_cpd_ocean_covariates_logR,
+                                                       effect = "cpd",
+                                                       species = "chum",
+                                                       covariate_value = average_cda_2022$average_cda_2022)
+
+
+
+
+forestry_data_timeseries <- read.csv(here("forestry_data_compilation", "inputs",
+                                          "forestry_data", 
+                                          "forestry_data_timeseries.csv"))
+
+lookup_og <- read.csv(here("forestry_data_compilation", "inputs","salmon_datasets_plotting", "salmon_watersheds_lookup.csv"))
+
+
+forestry_data_timeseries_2022 <- forestry_data_timeseries %>% 
+  group_by(group,LINEAR_FEATURE_ID) %>% 
+  filter(year == max(year)) %>%
+  select(haarea_prct_cs, year, ECA_age_proxy_forested_only) %>% 
+  rename(haarea_prct_cs_2022 = haarea_prct_cs, year_2022 = year,
+         ECA_age_proxy_forested_only_2022 = ECA_age_proxy_forested_only)
+
+
+
+forestry_data_timeseries_max_eca <- forestry_data_timeseries %>% 
+  group_by(group,LINEAR_FEATURE_ID) %>% 
+  select(year, ECA_age_proxy_forested_only) %>% 
+  filter(ECA_age_proxy_forested_only == max(ECA_age_proxy_forested_only)) %>%
+  # if there are multiple years with same max eca, then use the latest year
+  filter(year == max(year)) %>%
+  rename(max_eca_year = year,
+         ECA_age_proxy_forested_only_max = ECA_age_proxy_forested_only)
+
+ch20rsc_2022 <- ch20rsc %>% 
+  left_join(lookup_og %>% 
+              filter(Species == "CM") %>% 
+              select(LINEAR_FEATURE_ID, GFE_ID), by = c("GFE_ID")) %>%
+  left_join(forestry_data_timeseries_2022, by = c("LINEAR_FEATURE_ID")) %>% 
+  left_join(forestry_data_timeseries_max_eca, by = c("LINEAR_FEATURE_ID")) 
+
+
+pk10r_2022 <- pk10r %>%
+  left_join(lookup_og %>% 
+              filter(Species == "PKO" | Species == "PKE") %>% 
+              select(LINEAR_FEATURE_ID, GFE_ID) %>% distinct(), by = c("GFE_ID")) %>%
+  left_join(forestry_data_timeseries_2022, by = c("LINEAR_FEATURE_ID")) %>% 
+  left_join(forestry_data_timeseries_max_eca %>% distinct(), by = c("LINEAR_FEATURE_ID")) 
+
+average_cda_2022 <- ch20rsc_2022 %>% 
+  group_by(River_n) %>% 
+  summarize(max_cda_2022 = max(haarea_prct_cs_2022)) %>% 
+  summarize(average_cda_2022 = mean(max_cda_2022))
+
+max_eca_2022 <- ch20rsc_2022 %>% 
+  group_by(River_n) %>% 
+  summarize(max_eca_2022 = max(ECA_age_proxy_forested_only_max)) %>% 
+  summarize(max_average_eca_2022 = mean(max_eca_2022))
+
+average_cda_2022_pink <- pk10r_2022 %>% 
+  group_by(River_n) %>% 
+  summarize(max_cda_2022 = max(haarea_prct_cs_2022)) %>% 
+  summarize(average_cda_2022 = mean(max_cda_2022))
+
+max_eca_2022_pink <- pk10r_2022 %>% 
+  group_by(River_n) %>% 
+  summarize(max_eca_2022 = max(ECA_age_proxy_forested_only_max)) %>% 
+  summarize(max_average_eca_2022 = mean(max_eca_2022))
+
+
+
+
+plot_chum_E <- plot_productivity_decline_manuscript_new(posterior = ric_chm_cpd_ocean_covariates_logR, 
+                                                        effect = "cpd", species = "chum",
+                                                        average_cda_2022 = average_cda_2022,
+                                                        max_eca_2022 = max_eca_2022,
+                                                        model = "", hd = FALSE)+
+  
+  
+  ylim(c(-75,75))+
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1, scale = 1))+
+  labs(y = "Change in productivity (%)",
+       x = "Cumulative disturbed area")+
+  theme(legend.position = c(0.95,0.99),
+        legend.direction = "vertical",
+        legend.key.size = unit(0.001, "cm"),
+        legend.key.width = unit(0.5, "cm"),
+        legend.key.height = unit(0.3, "cm"),
+        legend.spacing = unit(0.00, "cm"),
+        legend.justification = c("right", "top"),
+        legend.box.background = element_rect(color = "transparent", fill = "transparent"),
+        legend.box.margin = margin(0,0,0,0),
+        #make it horizontal
+        legend.box = "horizontal",
+        legend.text = element_text(size = 7))+
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
+
+
+# add maximum ECA lines
+
+plot_chum_F <-  plot_productivity_decline_manuscript_new(posterior = ric_chm_eca_ocean_covariates_logR,
+                                                         effect = "eca", species = "chum",
+                                                         average_cda_2022 = average_cda_2022,
+                                                         max_eca_2022 = max_eca_2022,
+                                                         model = "", hd = FALSE)+
+  ylim(c(-75,75))+
+  #change x axis to go from 1 to 100 instead of 0 to 1
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1))+
+  labs(y = "Change in productivity (%)")+
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
+
+
+plot_pink_K <- plot_productivity_decline_manuscript_new(posterior = ric_pk_cpd_ersst,  
+                                                        species = "pink",
+                                                        average_cda_2022 = average_cda_2022_pink,
+                                                        max_eca_2022 = max_eca_2022_pink,
+                                                        effect = "cpd", 
+                                                        # model = "Ricker model with CPD")
+                                                        model = "", hd = FALSE)+
+  ylim(c(-75,75))+
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1, scale = 1))+
+  labs(y = "Change in productivity (%)",
+       x = "Cumulative disturbed area")+
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
+
+plot_pink_L <- plot_productivity_decline_manuscript_new(posterior = ric_pk_eca_ersst,
+                                                        species = "pink",
+                                                        average_cda_2022 = average_cda_2022_pink,
+                                                        max_eca_2022 = max_eca_2022_pink,
+                                                        effect = "eca", 
+                                                        # model = "Ricker model with ECA")
+                                                        model = "", hd = FALSE)+
+  scale_x_continuous(labels = scales::percent_format(accuracy = 1))+
+  ylim(c(-75,75))+
+  labs(y = "Change in productivity (%)")+
+  theme(axis.title.x = element_text(size = 10),
+        axis.title.y = element_text(size = 10))
+
+plot_chum2 <- ((plot_chum_A / plot_chum_B / plot_chum_C / plot_chum_D)+ plot_layout(axes = 'collect') | 
+                 ((plot_chum_E  / plot_chum_F ) ) ) + plot_layout(widths = c(1.7,1))
+# plot_chum[[1]] <- plot_chum[[1]] + plot_layout(tag_level = 'new') 
+# 
+
+plot_chum2
+
+plot_pink2 <- ((plot_pink_G / plot_pink_H / plot_pink_I / plot_pink_J)+ plot_layout(axes = 'collect') |
+                 ((plot_pink_K  / plot_pink_L ))) + plot_layout(widths = c(1.7,1))
+
+plot_pink2
+
+plot_pink_chum_w_title2 <- ((wrap_elements(panel = plot_chum2 + plot_annotation(tag_levels = list(c('A','B','C','D','I','J')), 
+                                                                                title = "Chum salmon")& 
+                                             theme(plot.tag.position = c(0.05, 1),
+                                                   plot.tag = element_text(size = 10, hjust = 0, vjust = 0, face = "bold")))) / (wrap_elements(panel = plot_pink2+  
+                                                                                                                                                 plot_annotation(tag_levels = list(c('E','F','G','H','K','L')),
+                                                                                                                                                                 # tag_suffix = ')',
+                                                                                                                                                                 title = "Pink salmon")& 
+                                                                                                                                                 theme(plot.tag.position = c(0.05, 1),
+                                                                                                                                                       plot.tag = element_text(size = 10, hjust = 0, vjust = 0, face = "bold"))))) 
+plot_pink_chum_w_title2
+
+ggsave(here('output_figures_tables','manuscript_fig4_sep2026_chum_pink_ricker.pdf'),
+       plot = plot_pink_chum_w_title2,
+       width = 8,
+       height = 12,
+       units = 'in',
+       dpi = 300)
+
+ggsave(here('output_figures_tables','manuscript_fig4_sep2026_chum_pink_ricker.png'),
+       plot = plot_pink_chum_w_title2,
+       width = 8,
+       height = 12,
+       units = 'in', bg = "white",
+       dpi = 300)
