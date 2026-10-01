@@ -48,6 +48,7 @@ pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='950-169400-00000-00000-0000-0000-00
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='915-765500-18600-00000-0000-0000-000-000-000-000-000-000','HEAD CREEK 2',pk10r_e$River)
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='915-488000-41400-00000-0000-0000-000-000-000-000-000-000','WINDY BAY CREEK 2',pk10r_e$River)
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=="915-486500-05300-00000-0000-0000-000-000-000-000-000-000",'LAGOON CREEK 2',pk10r_e$River)
+pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=="915-765500-14100-00000-0000-0000-000-000-000-000-000-000",'WEST CREEK 2',pk10r_e$River)
 pk10r_e=pk10r_e[order(factor(pk10r_e$River),pk10r_e$BroodYear),]
 rownames(pk10r_e)=seq(1:nrow(pk10r_e))
 
