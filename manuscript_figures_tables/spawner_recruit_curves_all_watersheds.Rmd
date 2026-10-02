@@ -5,7 +5,7 @@ author: 'Maria Kuruvilla'
 date: "Sep 2026"
 output:
   html_document:
-    collapsed: false
+    collapsed: true
     fig_caption: true
     highlight: espresso
     number_sections: true
@@ -52,7 +52,7 @@ h3 { /* Header 3 */
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(warning = FALSE, echo = FALSE)
 knitr::opts_chunk$set(warning = FALSE)
-knitr::opts_chunk$set(cache=FALSE)
+knitr::opts_chunk$set(cache=TRUE)
 options(max.print=23)
 library(here);library(dplyr); library(stringr)
 library(ggplot2)
@@ -86,7 +86,7 @@ knitr::include_graphics(here("output_figures_tables",
 
 
 
-```{r}
+```{r message=FALSE, warning=FALSE, cache = TRUE}
 
 
 
@@ -136,14 +136,14 @@ options(mc.cores=8)
 # Pink salmon - even/odd croodlines #####
 pk10r_o$River=ifelse(pk10r_o$WATERSHED_CDE=='950-169400-00000-00000-0000-0000-000-000-000-000-000-000','SALMON RIVER 2',pk10r_o$River)
 pk10r_o$River=ifelse(pk10r_o$WATERSHED_CDE=='915-765500-18600-00000-0000-0000-000-000-000-000-000-000','HEAD CREEK 2',pk10r_o$River)
-pk10r_o$River=ifelse(pk10r_o$WATERSHED_CDE=='915-488000-41400-00000-0000-0000-000-000-000-000-000-000','WINDY cAY CREEK 2',pk10r_o$River)
+pk10r_o$River=ifelse(pk10r_o$WATERSHED_CDE=='915-488000-41400-00000-0000-0000-000-000-000-000-000-000','WINDY BAY CREEK 2',pk10r_o$River)
 pk10r_o$River=ifelse(pk10r_o$WATERSHED_CDE=="915-486500-05300-00000-0000-0000-000-000-000-000-000-000",'LAGOON CREEK 2',pk10r_o$River)
 pk10r_o=pk10r_o[order(factor(pk10r_o$River),pk10r_o$BroodYear),]
 rownames(pk10r_o)=seq(1:nrow(pk10r_o))
 
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='950-169400-00000-00000-0000-0000-000-000-000-000-000-000','SALMON RIVER 2',pk10r_e$River)
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='915-765500-18600-00000-0000-0000-000-000-000-000-000-000','HEAD CREEK 2',pk10r_e$River)
-pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='915-488000-41400-00000-0000-0000-000-000-000-000-000-000','WINDY cAY CREEK 2',pk10r_e$River)
+pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='915-488000-41400-00000-0000-0000-000-000-000-000-000-000','WINDY BAY CREEK 2',pk10r_e$River)
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=="915-486500-05300-00000-0000-0000-000-000-000-000-000-000",'LAGOON CREEK 2',pk10r_e$River)
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=="915-765500-14100-00000-0000-0000-000-000-000-000-000-000",'WEST CREEK 2',pk10r_e$River)
 
@@ -302,7 +302,7 @@ pk10r_2022 <- pk10r %>%
 
 
 
-```{r}
+```{r message=FALSE, warning=FALSE, cache = TRUE}
 
 # all plotting functions
 
@@ -607,8 +607,11 @@ plot_recruitment_change_river_together_new <- function(posterior1 = ric_chm_cpd_
                    linetype = "dashed", linewidth = 0.8) +
       annotate("text",x = unique(productivity_cpd_df$max_cpd_2022), 
                y = productivity_cpd_df$productivity_cpd_median[which.min(abs(cpd - unique(productivity_cpd_df$max_cpd_2022)))],
-               label = paste0("2022 CDA: ",round(unique(productivity_cpd_df$max_cpd_2022),2),"%\n",
-                              "Median change: ",round(productivity_cpd_df$productivity_cpd_median[which.min(abs(cpd - unique(productivity_cpd_df$max_cpd_2022)))],2),"%"),
+               label = ifelse(unique(productivity_cpd_df$max_cpd_2022) < 50, (paste0("2022 CDA: ",round(unique(productivity_cpd_df$max_cpd_2022),2),"%\n",
+                              "Median change: ",round(productivity_cpd_df$productivity_cpd_median[which.min(abs(cpd - unique(productivity_cpd_df$max_cpd_2022)))],2),"%")), (paste0("2022 CDA:\n",round(unique(productivity_cpd_df$max_cpd_2022),2),"%\n",
+                              "Median change:\n",round(productivity_cpd_df$productivity_cpd_median[which.min(abs(cpd - unique(productivity_cpd_df$max_cpd_2022)))],2),"%"))
+                              
+                              ),
                vjust = -0.5, color = "black", size = 2, hjust = 0
       ) +
       
@@ -702,7 +705,7 @@ plot_recruitment_change_river_together_new <- function(posterior1 = ric_chm_cpd_
       labs(x = "ECA",
            y = "Change in productivity (%)") +
       theme_classic() +
-      theme(legend.position = "inside",
+      theme(legend.position = ifelse(river_name ==  "AALTANHASH RIVER", "inside", "none"), # only for the first plot
             legend.justification = c("right", "top"),
             legend.byrow = FALSE,
             legend.title = element_blank(),
@@ -1215,12 +1218,13 @@ plot_recruit_spawner_river_pink <- function(species = "pink", river_name,  poste
 
 
 
-for(river in watersheds_total$River[1:10]){
+for(river in watersheds_total$River){
   
   cat('\n')
   cat("## ", river, "\n")
   cat('\n')
   
+  # print(river)
   #create flags for chum, pink even, and pink odd
   
   flag_chum = !is.na(watersheds_total$CU_chum[watersheds_total$River == river])
@@ -1231,42 +1235,69 @@ for(river in watersheds_total$River[1:10]){
     river_data <- ch20rsc_2022 %>% filter(River == river)
     # print("chum")
     
-    ln_RS_plot <- ggplot(river_data,aes(x = BroodYear, y = ln_RS)) + 
+    #stop if river_data has 0 rows
+    if(nrow(river_data) == 0){
+      cat("No data for this river")
+      next
+    }
+    
+    river_n <- river_data$River_n[1]
+    
+    posterior_df <- ric_chm_cpd_ocean_covariates_logR_long_chain %>%
+      select(starts_with(paste0('b_for_rv[',as.character(river_n),']'))) %>%
+      pivot_longer(cols = everything(), 
+                   names_to = 'River', 
+                   names_prefix = 'b_for_rv',
+                   values_to = "forestry") %>%
+      mutate(River_n = as.numeric(str_extract(River, '\\d+'))) %>% 
+      select(-River) %>% 
+      mutate(River = river_n)
+    
+    #stop if posterior_df has 0 rows
+    if(nrow(posterior_df) == 0){
+      cat("No posterior data for this river")
+      next
+    }
+    
+    
+    
+    
+    ln_RS_plot <- ggplot(river_data,aes(x = BroodYear, y = ln_RS)) +
     geom_line(size = 0.8, alpha = 0.7, color = "gray20") +
     geom_point(size = 2, alpha = 0.7, color = "gray20") +
     labs(y ="log (Recruits/Spawners)", x = "Brood Year") +
     theme_classic() +
-    theme(axis.title.x = element_text(size = 10),
-          axis.title.y = element_text(size = 10),
-          axis.text.x = element_text(size = 8),
-          axis.text.y = element_text(size = 8))
-  
-  eca_plot <- ggplot(river_data,aes(x = BroodYear, y = ECA_age_proxy_forested_only)) + 
+    theme(axis.title.x = element_text(size = 8),
+          axis.title.y = element_text(size = 8),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_text(size = 6))
+
+  eca_plot <- ggplot(river_data,aes(x = BroodYear, y = ECA_age_proxy_forested_only)) +
     geom_line(size = 0.8, alpha = 0.7, color = '#7F6A93') +
     geom_point(size = 2, alpha = 0.7, color = '#7F6A93') +
     labs(y = "Equivalent\n Clearcut Area (ECA)", x = "Brood Year") +
     theme_classic() +
-    theme(axis.title.x = element_text(size = 10),
-          axis.title.y = element_text(size = 10),
-          axis.text.x = element_text(size = 8),
-          axis.text.y = element_text(size = 8))
-  
-  cpd_plot <- ggplot(river_data,aes(x = BroodYear, y = disturbedarea_prct_cs)) + 
+    theme(axis.title.x = element_text(size = 8),
+          axis.title.y = element_text(size = 8),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_text(size = 6))
+
+  cpd_plot <- ggplot(river_data,aes(x = BroodYear, y = disturbedarea_prct_cs)) +
     geom_line(size = 0.8, alpha = 0.7, color = '#A2C5AC') +
     geom_point(size = 2, alpha = 0.7, color = '#A2C5AC') +
     labs(y = "Cumulative\n Disturbed Area (%)", x = "Brood Year") +
     theme_classic() +
-    theme(axis.title.x = element_text(size = 10),
-          axis.title.y = element_text(size = 10),
-          axis.text.x = element_text(size = 8),
-          axis.text.y = element_text(size = 8))
-  
+    theme(axis.title.x = element_text(size = 8),
+          axis.title.y = element_text(size = 8),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_text(size = 6))
+
   effects_plot <- plot_all_effects_river_together(
     posterior1 = ric_chm_cpd_ocean_covariates_logR_long_chain,
     river_name = str_to_title(river),
     river = unique(river_data$River_n)
   )
-  
+
   change_plot <- plot_recruitment_change_river_together_new(
     posterior1 = ric_chm_cpd_ocean_covariates_logR_long_chain,
     posterior2 = ric_chm_eca_ocean_covariates_logR_long_chain,
@@ -1278,31 +1309,31 @@ for(river in watersheds_total$River[1:10]){
     model2 = "ECA",
     hd = FALSE
   )
-  
+
   spawner_recruit_plot <- plot_recruit_spawner_river_new(species = "chum",
                                  river_name = river,
                                  posterior = ric_chm_cpd_ocean_covariates_logR_long_chain)
-  
-  
+
+
   print((eca_plot / cpd_plot / ln_RS_plot) + plot_layout(axis_titles = "collect") +
-          
+
            plot_annotation(tag_levels = 'A',
                            title = paste("Data for Chum Salmon"))&
            theme(plot.tag.position = c(0.0, 1.0),
                  plot.title = element_text(size = 8),
                  plot.tag = element_text(size = 10, hjust = 0, vjust = 0, face = "bold")))
-  
+
   cat('\n')
   cat('\n')
-  
+
   print(((effects_plot+spawner_recruit_plot + plot_layout(widths = c(1,1)))/change_plot) +
            plot_annotation(tag_levels = 'A',title = paste("Model Results for Chum Salmon"))&
            theme(plot.tag.position = c(0.0, 1.0),
                  plot.title = element_text(size = 8),
                  plot.tag = element_text(size = 10, hjust = 0, vjust = 0, face = "bold")))
-  
-  
- 
+
+
+
   
   cat('\n')
   
@@ -1311,23 +1342,47 @@ for(river in watersheds_total$River[1:10]){
   if(flag_pink_even | flag_pink_odd){
     river_data <- pk10r_2022 %>% filter(River == river)
     # print("pink")
-    ln_RS_plot <- ggplot(river_data,aes(x = BroodYear, y = ln_RS, group = Broodline, color = Broodline)) + 
+    # print(glimpse(river_data))
+    #stop if river_data has 0 rows
+    if(nrow(river_data) == 0){
+      cat("No data for this river")
+      next
+    }
+    
+    river_n <- river_data$River_n[1]
+    
+    posterior_df_pink <- ric_pk_cpd_ersst_long_chain %>%
+      select(starts_with(paste0('b_for_rv[',as.character(river_n),']'))) %>%
+      pivot_longer(cols = everything(), 
+                   names_to = 'River', 
+                   names_prefix = 'b_for_rv',
+                   values_to = "forestry") %>%
+      mutate(River_n = as.numeric(str_extract(River, '\\d+'))) %>% 
+      select(-River) %>% 
+      mutate(River = river_n)
+    
+    #stop if posterior_df has 0 rows
+    if(nrow(posterior_df_pink) == 0){
+      cat("No posterior data for this river")
+      next
+    }
+    ln_RS_plot <- ggplot(river_data,aes(x = BroodYear, y = ln_RS, group = Broodline, color = Broodline)) +
       geom_line(size = 0.8, alpha = 0.7) +
       geom_point(size = 2, alpha = 0.7) +
       labs(y ="log (Recruits/Spawners)", x = "Brood Year") +
       scale_color_manual(values = c("Even" = "#89C9C4", "Odd" = "#C989A3"))+
       theme_classic() +
-      theme(axis.title.x = element_text(size = 10),
-            axis.title.y = element_text(size = 10),
-            axis.text.x = element_text(size = 8),
-          axis.text.y = element_text(size = 8))
-    
+      theme(axis.title.x = element_text(size = 8),
+          axis.title.y = element_text(size = 8),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_text(size = 6))
+
     effects_plot <- plot_all_effects_river_together(
       posterior1 = ric_pk_cpd_ersst_long_chain,
       river_name = str_to_title(river),
       river = unique(river_data$River_n)
     )
-    
+
     change_plot <- plot_recruitment_change_river_together_new(
     posterior1 = ric_pk_cpd_ersst_long_chain,
     posterior2 = ric_pk_eca_ersst_long_chain,
@@ -1339,17 +1394,17 @@ for(river in watersheds_total$River[1:10]){
     model2 = "ECA",
     hd = FALSE
   )
-    
+
     if(flag_pink_even){
-      
+
       # print("even")
       spawner_recruit_plot_even <- plot_recruit_spawner_river_pink(species = "pink",
                                                          river_name = paste0(river,"_Even"),
                                                          posterior = ric_pk_cpd_ersst_long_chain)
     } else {
-      spawner_recruit_plot_even <- ggplot() + theme_void() 
+      spawner_recruit_plot_even <- ggplot() + theme_void()
     }
-    
+
     if(flag_pink_odd){
       spawner_recruit_plot_odd <- plot_recruit_spawner_river_pink(species = "pink",
                                                          river_name = paste0(river,"_Odd"),
@@ -1357,48 +1412,48 @@ for(river in watersheds_total$River[1:10]){
     } else {
       spawner_recruit_plot_odd <- ggplot() + theme_void()
     }
-    
-    eca_plot <- ggplot(river_data,aes(x = BroodYear, y = ECA_age_proxy_forested_only)) + 
+
+    eca_plot <- ggplot(river_data,aes(x = BroodYear, y = ECA_age_proxy_forested_only)) +
         geom_line(size = 0.8, alpha = 0.7, color = '#7F6A93') +
         geom_point(size = 2, alpha = 0.7, color = '#7F6A93') +
         labs(y = "Equivalent\n Clearcut Area (ECA)", x = "Brood Year") +
         theme_classic() +
-        theme(axis.title.x = element_text(size = 10),
-              axis.title.y = element_text(size = 10),
-              axis.text.x = element_text(size = 8),
-              axis.text.y = element_text(size = 8))
-    
-      cpd_plot <- ggplot(river_data,aes(x = BroodYear, y = disturbedarea_prct_cs)) + 
+        theme(axis.title.x = element_text(size = 8),
+          axis.title.y = element_text(size = 8),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_text(size = 6))
+
+      cpd_plot <- ggplot(river_data,aes(x = BroodYear, y = disturbedarea_prct_cs)) +
         geom_line(size = 0.8, alpha = 0.7, color = '#A2C5AC') +
         geom_point(size = 2, alpha = 0.7, color = '#A2C5AC') +
         labs(y = "Cumulative\n Disturbed Area (%)", x = "Brood Year") +
         theme_classic() +
-        theme(axis.title.x = element_text(size = 10),
-              axis.title.y = element_text(size = 10),
-              axis.text.x = element_text(size = 8),
-              axis.text.y = element_text(size = 8))
-      
+        theme(axis.title.x = element_text(size = 8),
+          axis.title.y = element_text(size = 8),
+          axis.text.x = element_text(size = 6),
+          axis.text.y = element_text(size = 6))
+
       print((eca_plot / cpd_plot / ln_RS_plot) + plot_layout(axis_titles = "collect") +
-              
+
               plot_annotation(tag_levels = 'A',
                               title = paste("Data for Pink Salmon"))&
               theme(plot.tag.position = c(0.0, 1.0),
                     plot.title = element_text(size = 8),
                     plot.tag = element_text(size = 10, hjust = 0, vjust = 0, face = "bold")))
-      
+
       cat('\n')
       cat('\n')
-      
+
       if(flag_pink_odd){
-        print(((effects_plot+spawner_recruit_plot_even/spawner_recruit_plot_odd + 
+        print(((effects_plot+spawner_recruit_plot_even/spawner_recruit_plot_odd +
                   plot_layout(widths = c(1,1.2)))/change_plot) + plot_layout(heights = c(1.5,1)) +
                 plot_annotation(tag_levels = 'A',title = paste("Model Results for Pink Salmon"))&
                 theme(plot.tag.position = c(0.0, 1.0),
                       plot.title = element_text(size = 8),
                       plot.tag = element_text(size = 10, hjust = 0, vjust = 0, face = "bold")
-                )) 
+                ))
       } else{
-        print(((effects_plot+spawner_recruit_plot_even + 
+        print(((effects_plot+spawner_recruit_plot_even +
                   plot_layout(widths = c(1,1.2)))/change_plot) + plot_layout(heights = c(1.5,1)) +
                 plot_annotation(tag_levels = 'A',title = paste("Model Results for Pink Salmon"))&
                 theme(plot.tag.position = c(0.0, 1.0),
@@ -1406,7 +1461,7 @@ for(river in watersheds_total$River[1:10]){
                       plot.tag = element_text(size = 10, hjust = 0, vjust = 0, face = "bold")
                 ))
       }
-      
+
       cat('\n')
       
       
