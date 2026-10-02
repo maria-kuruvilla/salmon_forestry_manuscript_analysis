@@ -72,6 +72,8 @@ pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='950-169400-00000-00000-0000-0000-00
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='915-765500-18600-00000-0000-0000-000-000-000-000-000-000','HEAD CREEK 2',pk10r_e$River)
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='915-488000-41400-00000-0000-0000-000-000-000-000-000-000','WINDY cAY CREEK 2',pk10r_e$River)
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=="915-486500-05300-00000-0000-0000-000-000-000-000-000-000",'LAGOON CREEK 2',pk10r_e$River)
+pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=="915-765500-14100-00000-0000-0000-000-000-000-000-000-000",'WEST CREEK 2',pk10r_e$River)
+
 pk10r_e=pk10r_e[order(factor(pk10r_e$River),pk10r_e$BroodYear),]
 rownames(pk10r_e)=seq(1:nrow(pk10r_e))
 
@@ -899,19 +901,19 @@ plot_npgo_effect_manuscript <- function(posterior = bh_chm_eca_npgo,
 
 
 
-ric_chm_eca_ocean_covariates_logR=read.csv(here('salmon_forestry_data_analysis','stan models','outs','posterior',
+ric_chm_eca_ocean_covariates_logR_long_chain=read.csv(here('salmon_forestry_data_analysis','stan models','outs','posterior',
                                                 'ric_chm_eca_ocean_covariates_logR_long_chain.csv'),check.names=F)
-ric_chm_cpd_ocean_covariates_logR=read.csv(here('salmon_forestry_data_analysis','stan models','outs','posterior',
+ric_chm_cpd_ocean_covariates_logR_long_chain=read.csv(here('salmon_forestry_data_analysis','stan models','outs','posterior',
                                                 'ric_chm_cpd_ocean_covariates_logR_long_chain.csv'),check.names=F)
 
 
 
-ric_pk_eca_ersst = read.csv(here('salmon_forestry_data_analysis','stan models',
+ric_pk_eca_ersst_long_chain = read.csv(here('salmon_forestry_data_analysis','stan models',
                                  'outs',
                                  'posterior',
                                  'ric_pk_eca_st_noac_ocean_covariates_logR_long_chain_sigma_vector.csv'),check.names=F)
 
-ric_pk_cpd_ersst = read.csv(here('salmon_forestry_data_analysis','stan models',
+ric_pk_cpd_ersst_long_chain = read.csv(here('salmon_forestry_data_analysis','stan models',
                                  'outs',
                                  'posterior',
                                  'ric_pk_cpd_st_noac_ocean_covariates_logR_long_chain_sigma_vector.csv'),check.names=F)
@@ -923,7 +925,7 @@ ric_pk_cpd_ersst = read.csv(here('salmon_forestry_data_analysis','stan models',
 
 
 
-plot_chum_A <- plot_forestry_effect_manuscript(posterior = ric_chm_cpd_ocean_covariates_logR, 
+plot_chum_A <- plot_forestry_effect_manuscript(posterior = ric_chm_cpd_ocean_covariates_logR_long_chain, 
                                                effect = "cpd", species = "chum", 
                                                model = "Cumulative disturbed area", xlim = c(-0.5, 0.5))+
   theme(legend.position = c(0.8,0.9),
@@ -934,7 +936,7 @@ plot_chum_A <- plot_forestry_effect_manuscript(posterior = ric_chm_cpd_ocean_cov
         axis.title.y = element_text(size = 10))
 
 #add legend for credible intervals for one figure
-plot_chum_B <- plot_forestry_effect_manuscript(posterior = ric_chm_eca_ocean_covariates_logR, 
+plot_chum_B <- plot_forestry_effect_manuscript(posterior = ric_chm_eca_ocean_covariates_logR_long_chain, 
                                                effect = "eca", species = "chum", 
                                                model = "Equivalent clearcut area", xlim = c(-0.5, 0.5))+
   theme(legend.position = "none")+
@@ -942,7 +944,7 @@ plot_chum_B <- plot_forestry_effect_manuscript(posterior = ric_chm_eca_ocean_cov
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 
-plot_chum_C <- plot_sst_effect_manuscript(posterior = ric_chm_cpd_ocean_covariates_logR, 
+plot_chum_C <- plot_sst_effect_manuscript(posterior = ric_chm_cpd_ocean_covariates_logR_long_chain, 
                                           effect = "sst", species = "chum", 
                                           model = "Sea-surface temperature", 
                                           xlim = c(-0.5, 0.5))+
@@ -951,7 +953,7 @@ plot_chum_C <- plot_sst_effect_manuscript(posterior = ric_chm_cpd_ocean_covariat
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 
-plot_chum_D <- plot_npgo_effect_manuscript(posterior = ric_chm_cpd_ocean_covariates_logR, 
+plot_chum_D <- plot_npgo_effect_manuscript(posterior = ric_chm_cpd_ocean_covariates_logR_long_chain, 
                                            effect = "npgo", species = "chum", 
                                            model = "North Pacific Gyre Oscillation", 
                                            xlim = c(-0.5, 0.5))+
@@ -961,7 +963,7 @@ plot_chum_D <- plot_npgo_effect_manuscript(posterior = ric_chm_cpd_ocean_covaria
         axis.title.y = element_text(size = 10))
 
 
-plot_chum_E <- plot_productivity_decline_manuscript_new(posterior = ric_chm_cpd_ocean_covariates_logR,
+plot_chum_E <- plot_productivity_decline_manuscript_new(posterior = ric_chm_cpd_ocean_covariates_logR_long_chain,
                                                     effect = "cpd", model = "", hd = FALSE)+
   ylim(c(-75,75))+
   scale_x_continuous(labels = scales::percent_format(accuracy = 1, scale = 1))+
@@ -983,7 +985,7 @@ plot_chum_E <- plot_productivity_decline_manuscript_new(posterior = ric_chm_cpd_
         axis.title.y = element_text(size = 10))
 # guides(fill=guide_legend(nrow=1, byrow=TRUE))
 
-plot_chum_F <- plot_productivity_decline_manuscript_new(posterior = ric_chm_eca_ocean_covariates_logR,
+plot_chum_F <- plot_productivity_decline_manuscript_new(posterior = ric_chm_eca_ocean_covariates_logR_long_chain,
                                                     effect = "eca", model = "", hd = FALSE)+
   ylim(c(-75,75))+
   #change x axis to go from 1 to 100 instead of 0 to 1
@@ -1022,7 +1024,7 @@ plot_chum2
 
 # Pink 
 
-plot_pink_G <- plot_forestry_effect_manuscript(posterior = ric_pk_cpd_ersst, 
+plot_pink_G <- plot_forestry_effect_manuscript(posterior = ric_pk_cpd_ersst_long_chain, 
                                                effect = "cpd", species = "pink", 
                                                # model = "Ricker model with CPD", xlim = c(-1, 1))
                                                model = "Cumulative disturbed area", xlim = c(-0.5, 0.5))+
@@ -1031,7 +1033,7 @@ plot_pink_G <- plot_forestry_effect_manuscript(posterior = ric_pk_cpd_ersst,
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 
-plot_pink_H <- plot_forestry_effect_manuscript(posterior = ric_pk_eca_ersst,
+plot_pink_H <- plot_forestry_effect_manuscript(posterior = ric_pk_eca_ersst_long_chain,
                                                effect = "eca", species = "pink", 
                                                # model = "Ricker model with ECA", xlim = c(-1, 1))
                                                model = "Equivalent clearcut area", xlim = c(-0.5, 0.5))+
@@ -1040,7 +1042,7 @@ plot_pink_H <- plot_forestry_effect_manuscript(posterior = ric_pk_eca_ersst,
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 
-plot_pink_I <- plot_sst_effect_manuscript(posterior = ric_pk_cpd_ersst,
+plot_pink_I <- plot_sst_effect_manuscript(posterior = ric_pk_cpd_ersst_long_chain,
                                           effect = "sst", species = "pink", 
                                           # model = "Ricker model with CPD", 
                                           model = "Sea-surface temperature",
@@ -1051,7 +1053,7 @@ plot_pink_I <- plot_sst_effect_manuscript(posterior = ric_pk_cpd_ersst,
         axis.title.y = element_text(size = 10))
 
 
-plot_pink_J <- plot_npgo_effect_manuscript(posterior = ric_pk_cpd_ersst,
+plot_pink_J <- plot_npgo_effect_manuscript(posterior = ric_pk_cpd_ersst_long_chain,
                                            effect = "npgo", species = "pink", 
                                            # model = "Ricker model with CPD",
                                            model = "North Pacific Gyre Oscillation",
@@ -1062,7 +1064,7 @@ plot_pink_J <- plot_npgo_effect_manuscript(posterior = ric_pk_cpd_ersst,
         axis.title.y = element_text(size = 10))
 
 
-plot_pink_K <- plot_productivity_decline_manuscript_new(posterior = ric_pk_cpd_ersst,  
+plot_pink_K <- plot_productivity_decline_manuscript_new(posterior = ric_pk_cpd_ersst_long_chain,  
                                                     species = "pink",
                                                     effect = "cpd", 
                                                     # model = "Ricker model with CPD")
@@ -1074,7 +1076,7 @@ plot_pink_K <- plot_productivity_decline_manuscript_new(posterior = ric_pk_cpd_e
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 
-plot_pink_L <- plot_productivity_decline_manuscript_new(posterior = ric_pk_eca_ersst,
+plot_pink_L <- plot_productivity_decline_manuscript_new(posterior = ric_pk_eca_ersst_long_chain,
                                                     species = "pink",
                                                     effect = "eca", 
                                                     # model = "Ricker model with ECA")
@@ -1224,11 +1226,6 @@ recruitment_decline_df <- function(posterior, effect, species, covariate_value){
 
 #calculate recruitment decline for current_average_cpd and max_average_eca
 
-chum_recruitment_decline_cda <- recruitment_decline_df(ric_chm_cpd_ocean_covariates_logR,
-                                                       effect = "cpd",
-                                                       species = "chum",
-                                                       covariate_value = average_cda_2022$average_cda_2022)
-
 
 
 
@@ -1292,10 +1289,15 @@ max_eca_2022_pink <- pk10r_2022 %>%
   summarize(max_eca_2022 = max(ECA_age_proxy_forested_only_max)) %>% 
   summarize(max_average_eca_2022 = mean(max_eca_2022))
 
+chum_recruitment_decline_cda <- recruitment_decline_df(ric_chm_cpd_ocean_covariates_logR_long_chain,
+                                                       effect = "cpd",
+                                                       species = "chum",
+                                                       covariate_value = average_cda_2022$average_cda_2022)
 
 
 
-plot_chum_E <- plot_productivity_decline_manuscript_new(posterior = ric_chm_cpd_ocean_covariates_logR, 
+
+plot_chum_E <- plot_productivity_decline_manuscript_new(posterior = ric_chm_cpd_ocean_covariates_logR_long_chain, 
                                                         effect = "cpd", species = "chum",
                                                         average_cda_2022 = average_cda_2022,
                                                         max_eca_2022 = max_eca_2022,
@@ -1324,7 +1326,7 @@ plot_chum_E <- plot_productivity_decline_manuscript_new(posterior = ric_chm_cpd_
 
 # add maximum ECA lines
 
-plot_chum_F <-  plot_productivity_decline_manuscript_new(posterior = ric_chm_eca_ocean_covariates_logR,
+plot_chum_F <-  plot_productivity_decline_manuscript_new(posterior = ric_chm_eca_ocean_covariates_logR_long_chain,
                                                          effect = "eca", species = "chum",
                                                          average_cda_2022 = average_cda_2022,
                                                          max_eca_2022 = max_eca_2022,
@@ -1337,7 +1339,7 @@ plot_chum_F <-  plot_productivity_decline_manuscript_new(posterior = ric_chm_eca
         axis.title.y = element_text(size = 10))
 
 
-plot_pink_K <- plot_productivity_decline_manuscript_new(posterior = ric_pk_cpd_ersst,  
+plot_pink_K <- plot_productivity_decline_manuscript_new(posterior = ric_pk_cpd_ersst_long_chain,  
                                                         species = "pink",
                                                         average_cda_2022 = average_cda_2022_pink,
                                                         max_eca_2022 = max_eca_2022_pink,
@@ -1351,7 +1353,7 @@ plot_pink_K <- plot_productivity_decline_manuscript_new(posterior = ric_pk_cpd_e
   theme(axis.title.x = element_text(size = 10),
         axis.title.y = element_text(size = 10))
 
-plot_pink_L <- plot_productivity_decline_manuscript_new(posterior = ric_pk_eca_ersst,
+plot_pink_L <- plot_productivity_decline_manuscript_new(posterior = ric_pk_eca_ersst_long_chain,
                                                         species = "pink",
                                                         average_cda_2022 = average_cda_2022_pink,
                                                         max_eca_2022 = max_eca_2022_pink,
@@ -1387,14 +1389,14 @@ plot_pink_chum_w_title2 <- ((wrap_elements(panel = plot_chum2 + plot_annotation(
                                                                                                                                                        plot.tag = element_text(size = 10, hjust = 0, vjust = 0, face = "bold"))))) 
 plot_pink_chum_w_title2
 
-ggsave(here('output_figures_tables','manuscript_fig4_sep2026_chum_pink_ricker.pdf'),
+ggsave(here('output_figures_tables','manuscript_fig4_oct2026_chum_pink_ricker.pdf'),
        plot = plot_pink_chum_w_title2,
        width = 8,
        height = 12,
        units = 'in',
        dpi = 300)
 
-ggsave(here('output_figures_tables','manuscript_fig4_sep2026_chum_pink_ricker.png'),
+ggsave(here('output_figures_tables','manuscript_fig4_oct2026_chum_pink_ricker.png'),
        plot = plot_pink_chum_w_title2,
        width = 8,
        height = 12,

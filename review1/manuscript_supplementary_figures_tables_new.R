@@ -80,6 +80,8 @@ pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='950-169400-00000-00000-0000-0000-00
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='915-765500-18600-00000-0000-0000-000-000-000-000-000-000','HEAD CREEK 2',pk10r_e$River)
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=='915-488000-41400-00000-0000-0000-000-000-000-000-000-000','WINDY cAY CREEK 2',pk10r_e$River)
 pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=="915-486500-05300-00000-0000-0000-000-000-000-000-000-000",'LAGOON CREEK 2',pk10r_e$River)
+pk10r_e$River=ifelse(pk10r_e$WATERSHED_CDE=="915-765500-14100-00000-0000-0000-000-000-000-000-000-000",'WEST CREEK 2',pk10r_e$River)
+
 pk10r_e=pk10r_e[order(factor(pk10r_e$River),pk10r_e$BroodYear),]
 rownames(pk10r_e)=seq(1:nrow(pk10r_e))
 
@@ -347,7 +349,7 @@ combined_residuals <- (chum_residuals)/(pink_residuals) + plot_layout(guides = '
 
 combined_residuals
 
-ggsave(here("output_figures_tables", "supplementary_fig9_residuals_w_autocorrelation_logR_chum_pink_long_chain_sep2026.png"),
+ggsave(here("output_figures_tables", "supplementary_fig9_residuals_w_autocorrelation_logR_chum_pink_long_chain_oct2026.png"),
        width = 6, height = 6, dpi = 300, units = "in")
 
 
@@ -584,7 +586,7 @@ summary_cpd_pk <- summary_cpd_pk_file %>%
 
 #save
 write.csv(summary_cpd_pk, here("output_figures_tables",
-                                 "supplementary_table4_sep2026_pink_cpd_diagnostics_by_parameter_group.csv"),
+                                 "supplementary_table4_oct2026_pink_cpd_diagnostics_by_parameter_group.csv"),
           row.names = FALSE)
 
 
@@ -659,7 +661,7 @@ summary_eca_pk <- summary_eca_pk_file %>%
 
 #save
 write.csv(summary_eca_pk, here("output_figures_tables",
-                                 "supplementary_table4_sep2026_pink_eca_diagnostics_by_parameter_group.csv"),
+                                 "supplementary_table4_oct2026_pink_eca_diagnostics_by_parameter_group.csv"),
           row.names = FALSE)
 
 
@@ -712,7 +714,7 @@ all_effect_sizes
 #save
 
 write.csv(all_effect_sizes, here("output_figures_tables",
-                                 "forestry_ocean_effect_sizes_by_species_and_metric_sep2026.csv"),
+                                 "forestry_ocean_effect_sizes_by_species_and_metric_oct2026.csv"),
           row.names = FALSE)
 
 
@@ -3428,7 +3430,7 @@ for(i in pink_watersheds){
                                                               posterior = ric_pk_cpd_ersst_long_chain)
   
   ggsave(filename = here("output_figures_tables",
-                         paste0("supplementary_fig_case_study_sep2026_pink_",str_replace_all(str_to_lower(i), " ", "_"),".png")),
+                         paste0("supplementary_fig_case_study_oct2026_pink_",str_replace_all(str_to_lower(i), " ", "_"),".png")),
          plot = ((effects_plot+spawner_recruit_plot_even/spawner_recruit_plot_odd + 
                     plot_layout(widths = c(1,1.2)))/change_plot) + plot_layout(heights = c(1.5,1)) +
            plot_annotation(tag_levels = 'A',title = paste(str_to_title(i), "- Pink Salmon"))&
@@ -3657,8 +3659,8 @@ all_river_df_chum_pink <- all_river_df %>%
   rbind(all_river_df_pk) %>% 
   mutate(Estimate = paste(median, " (", lower_95, ", ", upper_95, ")", sep = "")) %>%
   mutate(Effect = case_when(Effect == "for" ~ "Forestry effect size",
-                            Effect == "sst" ~ "SST effect size",
                             Effect == "npgo" ~ "NPGO effect size",
+                            Effect == "sst" ~ "SST effect size",
                             Effect == "Recruitment change at max CPD level" ~ "Productivity change",
                             Effect == "Recruitment change at max ECA level" ~ "Productivity change",
                             Effect == "Recruitment change at max CPD level (2022)" ~ "Productivity change (2022)",
@@ -3681,7 +3683,7 @@ all_river_df_chum_pink <- all_river_df %>%
 
 # save table
 
-write.csv(all_river_df_chum_pink, here("output_figures_tables","supplementary_table_sep2026_case_study_effect_sizes_recruitment_chum_pink.csv"), row.names = FALSE)
+write.csv(all_river_df_chum_pink, here("output_figures_tables","supplementary_table_oct2026_case_study_effect_sizes_recruitment_chum_pink.csv"), row.names = FALSE)
 
 
 
@@ -3725,5 +3727,15 @@ ric_pk_cpd_ersst_long_chain %>%
   View()
 
 
+# check number of distinct pink and chum spawning populations
+ch20rsc_2022 %>% 
+  select(River_n) %>% 
+  distinct() %>% 
+  nrow()
+
+pk10r_2022 %>% 
+  select(River_n2) %>% 
+  distinct() %>% 
+  nrow()
 
 
