@@ -139,6 +139,31 @@ sst_df_spring_variable <- sst_df %>%
   mutate(spring_ersst_variable = case_when(year <= 1980 ~ late_spring_ersst,
                                            year > 1980 ~ early_spring_ersst))
 
+sst_df_may_june_july <- sst_df %>% 
+  group_by(lat, lon ,year) %>% 
+  filter(month %in% c(5,6,7)) %>%
+  summarise(may_june_july_ersst = mean(sst)) %>%
+  mutate(rolling_mean_sst = rollmean(sst, k = 5, fill = NA, align = "right")) %>%()
+
+sst_df_april_may_june <- sst_df %>% 
+  group_by(lat, lon ,year) %>% 
+  filter(month %in% c(4,5,6)) %>%
+  summarise(april_may_june_ersst = mean(sst)) %>%
+  ungroup()
+
+sst_df_march_april_may <- sst_df %>% 
+  group_by(lat, lon ,year) %>% 
+  filter(month %in% c(3,4,5)) %>%
+  summarise(march_april_may_ersst = mean(sst)) %>%
+  ungroup()
+
+sst_df_spring_variable_3_month <- sst_df_march_april_may %>% 
+  left_join(sst_df_april_may_june, by = c("lat" = "lat", "lon" = "lon", "year" = "year")) %>%
+  left_join(sst_df_may_june_july, by = c("lat" = "lat", "lon" = "lon", "year" = "year")) %>% 
+  mutate(spring_ersst_variable_3_month = case_when(year <= 1974 ~ may_june_july_ersst,
+                                                   year > 1974 & year <= 1994 ~ april_may_june_ersst,
+                                                   year > 1994 ~ march_april_may_ersst)) %>% 
+  left_join(sst_df_spring_variable, by = c("lat" = "lat", "lon" = "lon", "year" = "year"))
 
 
 
@@ -147,7 +172,7 @@ salmon_data_distance_temp <- chum_data_w_coord %>%
     left_join(min_distance_df %>% 
                 select(CU, River, distance, sst_ersst_lat, sst_ersst_lon),
               by = c("CU" = "CU", "River" = "River")) %>% 
-    left_join(sst_df_spring_variable %>% 
+    left_join(sst_df_spring_variable_3_month %>% 
                 group_by(lat, lon , year) %>%
                 mutate(BroodYear = year-1) %>% #sst fron year n will affect salmon whose BroodYear is n-1
                 rename("sst_ersst_year" = "year"),
@@ -221,4 +246,17 @@ ggplot(salmon_data_distance_temp)+
   labs(x = "Late spring SST", y = "Variable spring SST")+
   theme(axis.text = element_text(size = 12), axis.title = element_text(size = 14))
 
-
+ggplot(salmon_data_distance_temp)+
+  geom_point(aes(x = late_spring_ersst, y = spring_ersst_variable_3_month), alpha = 0.5)+
+  annotate("text", x = 10, y = 15, 
+           label = paste("correlation =", round(cor(salmon_data_distance_temp$late_spring_ersst, salmon_data_distance_temp$spring_ersst_variable_3_month), 2))) +
+  geom_abline() +
+  theme_classic() +
+  labs(x = "Late spring SST", y = "Variable spring SST (3 month)")+
+  theme(axis.text = element_text(size = 12), axis.title = element_text(size = 14))
+  
+  
+  
+  
+  
+  

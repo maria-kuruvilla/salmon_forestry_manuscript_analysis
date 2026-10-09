@@ -852,6 +852,15 @@ current_average_cpd_2022 <- ch20rsc %>%
   summarize(cpd_2022 = mean(haarea_prct_cs_2022)) %>% 
   summarize(current_average_cpd_2022 = mean(cpd_2022))
 
+max_average_eca_2022 <- df %>%
+  left_join(lookup_og %>% 
+              filter(Species == "CM") %>% 
+              select(LINEAR_FEATURE_ID, GFE_ID) %>% distinct(), by = c("GFE_ID")) %>%
+  left_join(forestry_data_timeseries_max_eca, by = c("LINEAR_FEATURE_ID")) %>% 
+  group_by(River_n) %>% 
+  summarize(max_eca_2022 = max(ECA_age_proxy_forested_only_max)) %>% 
+  summarize(max_average_eca_2022 = mean(max_eca_2022))
+
 
 # pink
 
@@ -902,6 +911,11 @@ chum_recruitment_decline_eca <- recruitment_decline_df_new(ric_chm_eca_ocean_cov
                                                          effect = "eca",
                                                          species = "chum",
                                                          covariate_value = max_average_eca$max_average_eca)
+
+chum_recruitment_decline_eca_2022 <- recruitment_decline_df_new(ric_chm_eca_ocean_covariates_logR_long_chain,
+                                                           effect = "eca",
+                                                           species = "chum",
+                                                           covariate_value = max_average_eca_2022$max_average_eca_2022)
 
 
 pink_recruitment_decline_cpd <- recruitment_decline_df_new(ric_pk_cpd_ersst_long_chain,
